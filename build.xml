@@ -1,0 +1,90 @@
+<project name="lombok.patcher" default="dist">
+	<path id="patcher.deps.path">
+		<fileset dir="deps">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+	<path id="patcher.libs.path">
+		<fileset dir="lib">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+	
+	<target name="clean" description="Deletes build artefacts">
+		<delete dir="build" quiet="true" />
+	</target>
+	
+	<target name="version" description="Shows the version number">
+		<mkdir dir="build/pack" />
+		<javac srcdir="src" debug="on" destdir="build/pack" target="1.5" includes="lombok/patcher/Version.java" />
+		<java
+			classname="lombok.patcher.Version"
+			classpath="build/pack"
+			failonerror="true"
+			output="build/version.txt" />
+		<loadresource property="lombok.patcher.version">
+			<file file="build/version.txt" />
+			<filterchain>
+				<striplinebreaks />
+			</filterchain>
+		</loadresource>
+		<echo level="info">Lombok patcher version: ${lombok.patcher.version}</echo>
+	</target>
+	
+	<target name="compile" description="Compiles lombok.patcher">
+		<mkdir dir="build/pack" />
+		<javac srcdir="src" debug="on" destdir="build/pack" target="1.5">
+			<classpath refid="patcher.deps.path" />
+			<classpath refid="patcher.libs.path" />
+		</javac>
+		<copy todir="build/pack">
+			<fileset dir="src">
+				<exclude name="**/*.java" />
+				<exclude name="**/*.class" />
+			</fileset>
+		</copy>
+		<unjar dest="build/pack">
+			<path refid="patcher.libs.path" />
+		</unjar>
+	</target>
+	
+	<target name="compileTests" depends="compile" description="Compiles the unit tests">
+		<mkdir dir="build/tests" />
+		<javac srcdir="test" debug="on" destdir="build/tests" target="1.5">
+			<classpath refid="patcher.deps.path" />
+			<classpath path="build/pack" />
+		</javac>
+	</target>
+	
+	<target name="-test">
+		<antcall target="test">
+			<param name="tests.quiet" value="true" />
+		</antcall>
+	</target>
+	
+	<target name="test" depends="compile, compileTests" unless="tests.run" description="Runs the unit tests">
+		<junit haltonfailure="yes" fork="on">
+			<formatter type="brief" usefile="false" unless="tests.quiet" />
+			<classpath refid="patcher.deps.path" />
+			<classpath path="build/pack" />
+			<classpath path="build/tests" />
+			<batchtest>
+				<fileset dir="test">
+					<include name="**/Test*.java" />
+				</fileset>
+			</batchtest>
+		</junit>
+		<property name="tests.run" value="true" />
+	</target>
+	
+	<target name="dist" depends="-test, version, compile" description="Creates the distributable">
+		<mkdir dir="dist" />
+		<jar basedir="build/pack" destfile="dist/lombok-patcher-${lombok.patcher.version}.jar">
+<!--			<manifest>
+				<attribute name="Premain-Class" value="lombok.patcher.Agent" />
+				<attribute name="Can-Redefine-Classes" value="true" />
+			</manifest>-->
+		</jar>
+		<copy file="dist/lombok-patcher-${lombok.patcher.version}.jar" tofile="dist/lombok-patcher.jar" />
+	</target>
+</project>

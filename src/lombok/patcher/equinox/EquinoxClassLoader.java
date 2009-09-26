@@ -19,9 +19,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package lombok.patcher;
+package lombok.patcher.equinox;
 
-public class EquinoxFixer {
+public class EquinoxClassLoader {
 	//Find equinox exclusion rule for "java." and add "lombok.patcher.EquinoxFixer" to it.
 	//Use WrapReturnValuesScript to wrap osgi classloaders into a custom classloader which will use the local jar
 	//to load X.* with yet another child loader that will prefer loading from local jar before reverting to original

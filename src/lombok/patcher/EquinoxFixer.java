@@ -26,4 +26,35 @@ public class EquinoxFixer {
 	//Use WrapReturnValuesScript to wrap osgi classloaders into a custom classloader which will use the local jar
 	//to load X.* with yet another child loader that will prefer loading from local jar before reverting to original
 	//return value. If it doesn't start with X., then load it with the direct child.
+	
+	//STEP 1:
+	//  Find each occurrence of 'startsWith("java.")' in:
+	//    org.eclipse.osgi.internal.loader.BundleLoader
+	//  and replace it with '(startsWith("java.") || equals("lombok.patcher.equinox.InjectingClassLoader"))'.
+	
+	//STEP2:
+	//  Patch the ClassLoaders to:
+	//     wrap the original loader (loaderA) with a child loader named loaderB.
+	
+	//     loaderB first checks if the class-to-be-loaded matches the registered pattern. If not, load it yourself*,
+	//     otherwise, load it with loaderC.
+	
+	//     loaderC first checks if the class is available in the local jar, and if so loads it*, else, delegates to B.
+	
+	//Loading it yourself means asking your parent (B for C, A for B) for the raw bytes, then running defineClass yourself.
+	
+	//To patch, fix calls of the OSGi framework into:
+	
+	//org.eclipse.osgi.internal.composite.CompositeClassLoader (extends ClassLoader)
+	//org.eclipse.osgi.internal.baseadaptor.DefaultClassLoader (extends ClassLoader)
+	//   org.eclipse.core.runtime.adaptor.EclipseClassLoader (extends DefaultClassLoader)
+	//org.eclipse.osgi.framework.adaptor.core.AbstractClassLoader (extends ClassLoader)
+	//   org.eclipse.osgi.framework.adaptor.core.DefaultClassLoader (extends AbstractClassLoader)
+	
+	//which can be found at:
+	
+	//org.eclipse.osgi.internal.composite.CompositeConfigurator#createClassLoader(*) [CompositeClassLoader]
+	//org.eclipse.osgi.baseadaptor.BaseData#createClassLoader(*) [DefaultClassLoader]
+	//org.eclipse.osgi.framework.internal.defaultadaptor.DefaultElementFactory#createClassLoader(*) [DefaultClassLoader]
+	//org.eclipse.core.runtime.adaptor.EclipseElementFactory#createClassLoader(*) [EclipseClassLoader]
 }

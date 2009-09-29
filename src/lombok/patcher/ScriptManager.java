@@ -24,9 +24,12 @@ package lombok.patcher;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
+import java.lang.reflect.InvocationTargetException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ScriptManager {
 	private final List<PatchScript> scripts = new ArrayList<PatchScript>();
@@ -40,7 +43,27 @@ public class ScriptManager {
 	}
 	
 	public void reloadClasses(Instrumentation instrumentation) {
-		//TODO
+		Set<String> toReload = new HashSet<String>();
+		
+		for (PatchScript s : scripts) toReload.addAll(s.getClassesToReload());
+		
+		for (Class<?> c : instrumentation.getAllLoadedClasses()) {
+			if (toReload.contains(c.getName())) {
+				try {
+					//instrumentation.retransformClasses(c); - //not in java 1.5.
+					Instrumentation.class.getMethod("retransformClasses", Class[].class).invoke(instrumentation,
+							new Object[] { new Class[] {c }});
+				} catch ( InvocationTargetException e ) {
+					throw new UnsupportedOperationException(
+							"The " + c.getName() + " class is already loaded and cannot be modified. " +
+							"You'll have to restart the application to patch it.");
+				} catch ( Throwable t ) {
+					throw new UnsupportedOperationException(
+							"This appears to be a JVM v1.5, which cannot reload already loaded classes. " +
+							"You'll have to restart the application to patch it.");
+				}
+			}
+		}
 	}
 	
 	public void injectAndReload() {

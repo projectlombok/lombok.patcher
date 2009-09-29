@@ -21,8 +21,8 @@
  */
 package lombok.patcher.scripts;
 
-import static org.junit.Assert.*;
 import static lombok.patcher.scripts.ScriptTestUtils.*;
+import static org.junit.Assert.*;
 
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
@@ -40,17 +40,19 @@ public class TestExitFromMethodEarlyScript {
 	public void testExitEarlyScript() throws Exception {
 		InputStream raw = TestExitFromMethodEarlyScript.class.getResourceAsStream("/lombok/patcher/scripts/TestExitFromMethodEarlyScriptEx1.class");
 		byte[] pretransform = readFromStream(raw);
-		byte[] posttransform1 = new ExitFromMethodEarlyScript(
-				new MethodTarget("lombok.patcher.scripts.TestExitFromMethodEarlyScriptEx1", "voidReturnMethod"),
-				new Hook("lombok/patcher/scripts/TestExitFromMethodEarlyScript$TestExitFromMethodEarlyScriptEx2", "hook1", "(Ljava/lang/Object;ILjava/lang/String;)Z"),
-				null, StackRequest.THIS, StackRequest.PARAM1, StackRequest.PARAM2)
+		byte[] posttransform1 = ScriptBuilder.exitEarly()
+				.target(new MethodTarget("lombok.patcher.scripts.TestExitFromMethodEarlyScriptEx1", "voidReturnMethod"))
+				.decisionMethod(new Hook("lombok/patcher/scripts/TestExitFromMethodEarlyScript$TestExitFromMethodEarlyScriptEx2",
+						"hook1", "(Ljava/lang/Object;ILjava/lang/String;)Z"))
+				.request(StackRequest.THIS, StackRequest.PARAM1, StackRequest.PARAM2).build()
 				.patch("lombok/patcher/scripts/TestExitFromMethodEarlyScriptEx1", pretransform);
-		byte[] posttransform2 = new ExitFromMethodEarlyScript(
-				new MethodTarget("lombok.patcher.scripts.TestExitFromMethodEarlyScriptEx1", "returnsSomething",
-						"double"),
-				new Hook("lombok/patcher/scripts/TestExitFromMethodEarlyScript$TestExitFromMethodEarlyScriptEx2", "hook2", "()Z"),
-				new Hook("lombok/patcher/scripts/TestExitFromMethodEarlyScript$TestExitFromMethodEarlyScriptEx2", "hook3", "()D")
-				)
+		byte[] posttransform2 = ScriptBuilder.exitEarly()
+				.target(new MethodTarget("lombok.patcher.scripts.TestExitFromMethodEarlyScriptEx1", "returnsSomething", "double"))
+				.decisionMethod(new Hook("lombok/patcher/scripts/TestExitFromMethodEarlyScript$TestExitFromMethodEarlyScriptEx2",
+						"hook2", "()Z"))
+				.valueMethod(new Hook("lombok/patcher/scripts/TestExitFromMethodEarlyScript$TestExitFromMethodEarlyScriptEx2",
+						"hook3", "()D"))
+				.transplant().build()
 				.patch("lombok/patcher/scripts/TestExitFromMethodEarlyScriptEx1", posttransform1);
 		
 		Class<?> ex1 = loadRaw("lombok.patcher.scripts.TestExitFromMethodEarlyScriptEx1", posttransform2);

@@ -21,13 +21,23 @@
  */
 package lombok.patcher;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
+import lombok.Getter;
+
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassAdapter;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 
 /**
@@ -44,6 +54,13 @@ public abstract class PatchScript {
 	}
 	
 	/**
+	 * Each class name (as standard java class name, with dots) listed here will be reloaded if the JVM supports this
+	 * and you start the ScriptManager while the JVM is already running instead of via the -javaagent parameter. Generally
+	 * you want to list each class you patch.
+	 */
+	public abstract Collection<String> getClassesToReload();
+	
+	/**
 	 * Transforms the class. You may return {@code null} if you have no interest in transforming this particular class.
 	 */
 	public abstract byte[] patch(String className, byte[] byteCode);
@@ -56,7 +73,7 @@ public abstract class PatchScript {
 		ClassReader reader = new ClassReader(byteCode);
 		ClassWriter writer = new ClassWriter(reader, computeMaxS ? ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES : 0);
 		
-		ClassVisitor visitor = createClassVisitor(writer);
+		ClassVisitor visitor = createClassVisitor(writer, reader.getClassName());
 		reader.accept(visitor, 0);
 		return writer.toByteArray();
 	}
@@ -64,7 +81,7 @@ public abstract class PatchScript {
 	/**
 	 * You need to override this method if you want to call {@see #runASM(byte[])}.
 	 */
-	protected ClassVisitor createClassVisitor(ClassWriter writer) {
+	protected ClassVisitor createClassVisitor(ClassWriter writer, String classSpec) {
 		throw new IllegalStateException("If you're going to call runASM, then you need to implement createClassVisitor");
 	}
 	
@@ -78,6 +95,36 @@ public abstract class PatchScript {
 		public MethodVisitor createMethodVisitor(MethodTarget target, MethodVisitor parent, MethodLogistics logistics);
 	}
 	
+	protected static void transplantMethod(final Hook methodToTransplant, final ClassVisitor target) throws IOException {
+		InputStream wrapStream = PatchScript.class.getResourceAsStream("/" + methodToTransplant.getClassSpec() + ".class");
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		byte[] b = new byte[65536];
+		while (true) {
+			int r = wrapStream.read(b);
+			if (r == -1) break;
+			baos.write(b, 0, r);
+		}
+		
+		ClassReader reader = new ClassReader(baos.toByteArray());
+		ClassVisitor methodFinder = new ClassVisitor() {
+			@Override public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {}
+			@Override public void visitAttribute(Attribute attr) {}
+			@Override public void visitEnd() {}
+			@Override public void visitOuterClass(String owner, String name, String desc) {}
+			@Override public void visitSource(String source, String debug) {}
+			@Override public void visitInnerClass(String name, String outerName, String innerName, int access) {}
+			@Override public AnnotationVisitor visitAnnotation(String desc, boolean visible) { return null; }
+			@Override public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) { return null; }
+			@Override public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+				if (name.equals(methodToTransplant.getMethodName()) && desc.equals(methodToTransplant.getMethodDescriptor())) {
+					return target.visitMethod(access, name, desc, signature, exceptions);
+				}
+				return null;
+			}
+		};
+		reader.accept(methodFinder, 0);
+	}
+	
 	/**
 	 * Convenience implementation of the {@code ClassAdapter} that you can return for {@see #createClassVisitor(ClassWriter)};
 	 * it will call into a custom {@code MethodVisitor} for specified methods, and pass through everything else. Perfect if you
@@ -85,8 +132,9 @@ public abstract class PatchScript {
 	 */
 	protected static class MethodPatcher extends ClassAdapter {
 		private List<MethodTarget> targets = new ArrayList<MethodTarget>();
-		private String classSpec;
+		private @Getter String ownClassSpec;
 		private final MethodPatcherFactory factory;
+		private List<Hook> transplants = new ArrayList<Hook>();
 		
 		public MethodPatcher(ClassVisitor cv, MethodPatcherFactory factory) {
 			super(cv);
@@ -101,15 +149,38 @@ public abstract class PatchScript {
 		}
 		
 		@Override public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-			this.classSpec = name;
+			this.ownClassSpec = name;
 			super.visit(version, access, name, signature, superName, interfaces);
+		}
+		
+		public void addTransplant(Hook transplant) {
+			if (transplant == null) throw new NullPointerException("transplant");
+			transplants.add(transplant);
+		}
+		
+		@Override public void visitEnd() {
+			for (Hook transplant : transplants) {
+				try {
+					transplantMethod(transplant, cv);
+				} catch ( IOException e ) {
+					throw new IllegalArgumentException("Cannot read hook method's host class", e);
+				}
+			}
 		}
 		
 		@Override public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
 			MethodVisitor visitor = super.visitMethod(access, name, desc, signature, exceptions);
 			
+			/* Remove transplant jobs where the method already exists - probably because of an earlier patch script. */ {
+				Iterator<Hook> it = transplants.iterator();
+				while (it.hasNext()) {
+					Hook h = it.next();
+					if (h.getMethodName().equals(name) && h.getMethodDescriptor().equals(desc)) it.remove();
+				}
+			}
+			
 			for (MethodTarget t : targets) {
-				if (t.matches(classSpec, name, desc)) {
+				if (t.matches(ownClassSpec, name, desc)) {
 					return factory.createMethodVisitor(t, visitor, new MethodLogistics(access, desc));
 				}
 			}

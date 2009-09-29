@@ -55,6 +55,9 @@ public final class MethodTarget {
 	@Getter
 	private final List<String> parameterSpec;
 	
+	@Getter
+	private boolean hasDescription;
+	
 	/**
 	 * Target any method with the provided name that appears in the provided class, regardless of return type and parameter types.
 	 * 
@@ -77,13 +80,20 @@ public final class MethodTarget {
 		this(classSpec, methodName, true, returnSpec, parameterSpecs);
 	}
 	
-	private MethodTarget(String classSpec, String methodName, boolean nullCheck, String returnSpec, String[] parameterSpecs) {
+	public Boolean returnTypeIsVoid() {
+		if (hasDescription) return returnSpec.equals("void");
+		return null;
+	}
+	
+	private MethodTarget(String classSpec, String methodName, boolean hasDescription, String returnSpec, String[] parameterSpecs) {
 		if (classSpec == null) throw new NullPointerException("classSpec");
 		if (methodName == null) throw new NullPointerException("methodName");
-		if (nullCheck && returnSpec == null) throw new NullPointerException("returnSpec");
-		if (nullCheck && parameterSpecs == null) throw new NullPointerException("parameterSpecs");
+		if (hasDescription && returnSpec == null) throw new NullPointerException("returnSpec");
+		if (hasDescription && parameterSpecs == null) throw new NullPointerException("parameterSpecs");
 		if (methodName.contains("[") || methodName.contains(".")) throw new IllegalArgumentException(
 				"Your method name contained dots or braces. Perhaps you switched return type and method name around?");
+		
+		this.hasDescription = hasDescription;
 		
 		this.classSpec = classSpec;
 		this.methodName = methodName;

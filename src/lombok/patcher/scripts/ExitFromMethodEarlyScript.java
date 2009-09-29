@@ -21,8 +21,8 @@
  */
 package lombok.patcher.scripts;
 
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 
 import lombok.NonNull;
@@ -47,16 +47,20 @@ public class ExitFromMethodEarlyScript extends PatchScript {
 	private final @NonNull MethodTarget targetMethod;
 	private final @NonNull Hook decisionWrapper, valueWrapper;
 	private final Set<StackRequest> requests;
+	private final boolean transplant;
 	
-	public ExitFromMethodEarlyScript(MethodTarget targetMethod, Hook decisionWrapper, Hook valueWrapper, StackRequest... requests) {
+	ExitFromMethodEarlyScript(MethodTarget targetMethod, Hook decisionWrapper, Hook valueWrapper, boolean transplant, Set<StackRequest> requests) {
 		if (targetMethod == null) throw new NullPointerException("targetMethod");
 		if (decisionWrapper == null) throw new NullPointerException("decisionWrapper");
 		this.targetMethod = targetMethod;
 		this.decisionWrapper = decisionWrapper;
 		this.valueWrapper = valueWrapper;
-		this.requests = new HashSet<StackRequest>(Arrays.asList(requests));
-		if (this.requests.contains(StackRequest.RETURN_VALUE)) throw new IllegalArgumentException(
-				"You cannot ask for the tentative return value in ExitFromMethodEarlyScript.");
+		this.requests = requests;
+		this.transplant = transplant;
+	}
+	
+	@Override public Collection<String> getClassesToReload() {
+		return Collections.singleton(targetMethod.getClassSpec());
 	}
 	
 	@Override public byte[] patch(String className, byte[] byteCode) {
@@ -64,27 +68,33 @@ public class ExitFromMethodEarlyScript extends PatchScript {
 		return runASM(byteCode, true);
 	}
 	
-	@Override protected ClassVisitor createClassVisitor(ClassWriter writer) {
+	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, final String classSpec) {
 		MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
 			@Override public MethodVisitor createMethodVisitor(MethodTarget target, MethodVisitor parent, MethodLogistics logistics) {
 				if (logistics.getReturnOpcode() != Opcodes.RETURN && valueWrapper == null) {
 					throw new IllegalStateException("method " + targetMethod.getMethodName() + " must return something, but " +
 							"you did not provide a value hook method.");
 				}
-				return new ExitEarly(parent, logistics);
+				return new ExitEarly(parent, logistics, classSpec);
 			}
 		});
 		
+		if (transplant) {
+			patcher.addTransplant(decisionWrapper);
+			if (valueWrapper != null) patcher.addTransplant(valueWrapper);
+		}
 		patcher.addMethodTarget(targetMethod);
 		return patcher;
 	}
 	
 	private class ExitEarly extends MethodAdapter {
 		private final MethodLogistics logistics;
+		private final String ownClassSpec;
 		
-		public ExitEarly(MethodVisitor mv, MethodLogistics logistics) {
+		public ExitEarly(MethodVisitor mv, MethodLogistics logistics, String ownClassSpec) {
 			super(mv);
 			this.logistics = logistics;
+			this.ownClassSpec = ownClassSpec;
 		}
 		
 		@Override public void visitCode() {
@@ -93,8 +103,8 @@ public class ExitFromMethodEarlyScript extends PatchScript {
 				if (!requests.contains(param)) continue;
 				logistics.generateLoadOpcodeForParam(param.getParamPos(), mv);
 			}
-			super.visitMethodInsn(Opcodes.INVOKESTATIC, decisionWrapper.getClassSpec(), decisionWrapper.getMethodName(),
-					decisionWrapper.getMethodDescriptor());
+			super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : decisionWrapper.getClassSpec(),
+					decisionWrapper.getMethodName(), decisionWrapper.getMethodDescriptor());
 			
 			/* Inject:
 			 * if ([result of decision hook]) {
@@ -116,8 +126,8 @@ public class ExitFromMethodEarlyScript extends PatchScript {
 					if (!requests.contains(param)) continue;
 					logistics.generateLoadOpcodeForParam(param.getParamPos(), mv);
 				}
-				super.visitMethodInsn(Opcodes.INVOKESTATIC, valueWrapper.getClassSpec(), valueWrapper.getMethodName(),
-						valueWrapper.getMethodDescriptor());
+				super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : valueWrapper.getClassSpec(),
+						valueWrapper.getMethodName(), valueWrapper.getMethodDescriptor());
 				logistics.generateReturnOpcode(mv);
 			}
 			mv.visitLabel(l0);

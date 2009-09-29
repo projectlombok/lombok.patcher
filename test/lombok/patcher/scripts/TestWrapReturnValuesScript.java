@@ -39,12 +39,13 @@ public class TestWrapReturnValuesScript {
 	public void testWrapReturnValuesScript() throws Exception {
 		InputStream raw = TestWrapReturnValuesScript.class.getResourceAsStream("/lombok/patcher/scripts/TestWrapReturnValuesScriptEx1.class");
 		byte[] pretransform = readFromStream(raw);
-		byte[] posttransform = new WrapReturnValuesScript(
-				new MethodTarget("lombok.patcher.scripts.TestWrapReturnValuesScriptEx1", "foo",
-						"int", "int", "java.lang.String[]"),
-				new Hook("lombok/patcher/scripts/TestWrapReturnValuesScript$TestWrapReturnValuesScriptEx2", "hook1", "(ILjava/lang/Object;I[Ljava/lang/String;)I"),
-				StackRequest.THIS, StackRequest.RETURN_VALUE, StackRequest.PARAM1, StackRequest.PARAM2)
-				.patch("lombok/patcher/scripts/TestWrapReturnValuesScriptEx1", pretransform);
+		byte[] posttransform = ScriptBuilder.wrapReturnValue()
+				.target(new MethodTarget("lombok.patcher.scripts.TestWrapReturnValuesScriptEx1", "foo",
+						"int", "int", "java.lang.String[]"))
+				.wrapMethod(new Hook("lombok/patcher/scripts/TestWrapReturnValuesScript$TestWrapReturnValuesScriptEx2",
+						"hook1", "(ILjava/lang/Object;I[Ljava/lang/String;)I"))
+				.transplant().request(StackRequest.THIS, StackRequest.RETURN_VALUE, StackRequest.PARAM1, StackRequest.PARAM2)
+				.build().patch("lombok/patcher/scripts/TestWrapReturnValuesScriptEx1", pretransform);
 		Class<?> ex1 = loadRaw("lombok.patcher.scripts.TestWrapReturnValuesScriptEx1", posttransform);
 		Method fooMethod = ex1.getMethod("foo", int.class, String[].class);
 		Constructor<?> ex1Constructor = ex1.getDeclaredConstructor();

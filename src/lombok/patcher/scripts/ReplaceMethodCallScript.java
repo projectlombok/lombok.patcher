@@ -23,15 +23,11 @@ package lombok.patcher.scripts;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Set;
 
-import lombok.NonNull;
-import lombok.ToString;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodLogistics;
 import lombok.patcher.MethodTarget;
 import lombok.patcher.PatchScript;
-import lombok.patcher.StackRequest;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -40,31 +36,24 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 /**
- * Will find every 'return' instruction in the target method and will insert right before it a call to the wrapper.
- * The wrapper will be given the instance (null if the target is static), and the value that would be returned.
+ * Replaces all calls to a given method with another (static) method. It is your job to ensure both all parameters and the
+ * return type are perfectly compatible. If you're replacing an instance method, make sure your static method's first
+ * parameter is type-compatible with the LHS of the instance method. You must also return something that is compatible with
+ * the method you're replacing.
  */
-@ToString
-public final class WrapReturnValuesScript extends PatchScript {
-	private final @NonNull MethodTarget targetMethod;
-	private final @NonNull Hook wrapper;
-	private final Set<StackRequest> requests;
-	private final boolean hijackReturnValue;
+public class ReplaceMethodCallScript extends PatchScript {
+	private final MethodTarget targetMethod;
+	private final Hook wrapper;
+	private final Hook methodToReplace;
 	private final boolean transplant;
-	
-	/**
-	 * @param targetMethod The target method to patch.
-	 * @param wrapper A call to this method will be inserted in front of each return in the target method (must be static).
-	 * @param transplant If true, the method content is loaded directly into the target class. Make sure you don't call
-	 *   helper methods if you use this!
-	 * @param requests The kinds of parameters you want your hook method to receive.
-	 */
-	WrapReturnValuesScript(MethodTarget targetMethod, Hook wrapper, boolean transplant, Set<StackRequest> requests) {
+
+	ReplaceMethodCallScript(MethodTarget targetMethod, Hook callToReplace, Hook wrapper, boolean transplant) {
 		if (targetMethod == null) throw new NullPointerException("targetMethod");
+		if (callToReplace == null) throw new NullPointerException("callToReplace");
 		if (wrapper == null) throw new NullPointerException("wrapper");
 		this.targetMethod = targetMethod;
+		this.methodToReplace = callToReplace;
 		this.wrapper = wrapper;
-		this.hijackReturnValue = !wrapper.getMethodDescriptor().endsWith(")V");
-		this.requests = requests;
 		this.transplant = transplant;
 	}
 	
@@ -80,7 +69,7 @@ public final class WrapReturnValuesScript extends PatchScript {
 	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, final String classSpec) {
 		final MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
 			@Override public MethodVisitor createMethodVisitor(MethodTarget target, MethodVisitor parent, MethodLogistics logistics) {
-				return new WrapReturnValues(parent, logistics, classSpec);
+				return new ReplaceMethodCall(parent, classSpec);
 			}
 		});
 		
@@ -90,48 +79,22 @@ public final class WrapReturnValuesScript extends PatchScript {
 		return patcher;
 	}
 	
-	private class WrapReturnValues extends MethodAdapter {
-		private final MethodLogistics logistics;
+	private class ReplaceMethodCall extends MethodAdapter {
 		private final String ownClassSpec;
 		
-		public WrapReturnValues(MethodVisitor mv, MethodLogistics logistics, String ownClassSpec) {
+		public ReplaceMethodCall(MethodVisitor mv, String ownClassSpec) {
 			super(mv);
-			this.logistics = logistics;
 			this.ownClassSpec = ownClassSpec;
 		}
 		
-		@Override public void visitInsn(int opcode) {
-			if (opcode != logistics.getReturnOpcode()) {
-				super.visitInsn(opcode);
-				return;
-			}
+		@Override public void visitMethodInsn(int opcode, String owner, String name, String desc) {
 			
-			if (requests.contains(StackRequest.RETURN_VALUE)) {
-				if (!hijackReturnValue) {
-					//The supposed return value is on stack, but the wrapper wants it and will not supply a new one, so duplicate it.
-					logistics.generateDupForReturn(mv);
-				}
+			if (methodToReplace.getMethodName().equals(name) && methodToReplace.getMethodDescriptor().equals(desc)) {
+				super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : wrapper.getClassSpec(),
+						wrapper.getMethodName(), wrapper.getMethodDescriptor());
 			} else {
-				if (hijackReturnValue) {
-					//The supposed return value is on stack, but the wrapper doesn't want it and will supply a new one, so, kill it.
-					logistics.generatePopForReturn(mv);
-				}
+				super.visitMethodInsn(opcode, owner, name, desc);
 			}
-			
-			if (requests.contains(StackRequest.THIS)) logistics.generateLoadOpcodeForThis(mv);
-			
-			for (StackRequest param : StackRequest.PARAMS_IN_ORDER) {
-				if (!requests.contains(param)) continue;
-				logistics.generateLoadOpcodeForParam(param.getParamPos(), mv);
-			}
-			
-			if (transplant) {
-				super.visitMethodInsn(Opcodes.INVOKESTATIC, ownClassSpec, wrapper.getMethodName(), wrapper.getMethodDescriptor());
-			} else {
-				super.visitMethodInsn(Opcodes.INVOKESTATIC, wrapper.getClassSpec(), wrapper.getMethodName(),
-						wrapper.getMethodDescriptor());
-			}
-			super.visitInsn(opcode);
 		}
 	}
 }

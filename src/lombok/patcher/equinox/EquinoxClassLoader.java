@@ -162,8 +162,6 @@ public class EquinoxClassLoader extends ClassLoader {
 		
 		Class<?> c = null;
 		
-		System.out.printf("ATTEMPTING LOAD [forced: %b]: %s\n", controlLoad, name);
-		
 		for (File file : classpath) {
 			if (file.isFile()) {
 				try {
@@ -194,8 +192,6 @@ public class EquinoxClassLoader extends ClassLoader {
 			return c;
 		}
 		
-		System.out.println("NOT FOUND LOCALLY - trying super.");
-		
 		if (controlLoad) {
 			try {
 				byte[] classData = readStream(super.getResourceAsStream(name.replace(".", "/") + ".class"));
@@ -209,14 +205,11 @@ public class EquinoxClassLoader extends ClassLoader {
 			} catch (ClassNotFoundException ignore) {}
 		}
 		
-		System.out.println("Still not found - marking this class as unfindable");
 		cantFind.add(name);
 		
 		for (ClassLoader subLoader : subLoaders) {
-			System.out.println("TRYING SUBLOADER: " + subLoader.getClass());
 			try {
 				c = subLoader.loadClass(name);
-				System.out.println("SUBLOADER FOUND: " + c);
 				if (resolve) {
 					if (resolveMethod == null) {
 						try {
@@ -264,7 +257,6 @@ public class EquinoxClassLoader extends ClassLoader {
 	}
 	
 	public static Class<?> overrideLoadResult(ClassLoader original, String name, boolean resolve) throws ClassNotFoundException {
-		System.out.printf("OVERRIDING CLASS LOAD OF[%b]: %s\n", resolve, name);
 		hostLoader.addSubLoader(original);
 		return hostLoader.loadClass(name, resolve);
 	}

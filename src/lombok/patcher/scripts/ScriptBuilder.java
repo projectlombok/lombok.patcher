@@ -211,7 +211,7 @@ public class ScriptBuilder {
 	public static class WrapReturnValueBuilder {
 		private MethodTarget target;
 		private Hook wrapMethod;
-		private Set<StackRequest> requests;
+		private Set<StackRequest> requests = new HashSet<StackRequest>();
 		private boolean transplant;
 		
 		public WrapReturnValuesScript build() {

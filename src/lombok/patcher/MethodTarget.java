@@ -23,6 +23,7 @@ package lombok.patcher;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -42,7 +43,7 @@ import lombok.ToString;
  */
 @ToString
 @EqualsAndHashCode
-public final class MethodTarget {
+public final class MethodTarget implements TargetMatcher {
 	@Getter
 	private final String classSpec;
 	
@@ -61,8 +62,8 @@ public final class MethodTarget {
 	/**
 	 * Target any method with the provided name that appears in the provided class, regardless of return type and parameter types.
 	 * 
-	 * @param classSpec The class name, separated by dots. Use 'int' for primitives, and suffix 1 pair of array brackets per array dimension.
-	 * @param methodName The method name (e.g.: {@code toLowerCase}).
+	 * @param classSpec the class name in binary form (separate package names by dots, separate inner classes with dollars).
+	 * @param methodName the method name (e.g.: {@code toLowerCase}).
 	 */
 	public MethodTarget(String classSpec, String methodName) {
 		this(classSpec, methodName, false, null, null);
@@ -71,10 +72,11 @@ public final class MethodTarget {
 	/**
 	 * Target any method with the provided name, the provided return type, and the provided parameter list, appearing in the provided class.
 	 * 
-	 * @param classSpec The class name, separated by dots. Use 'int' for primitives, and suffix 1 pair of array brackets per array dimension.
+	 * @param classSpec the class name in binary form (separate package names by dots, separate inner classes with dollars).
 	 * @param methodName The method name (e.g.: {@code toLowerCase}).
-	 * @param returnSpec The return type, in the same style as {@code classSpec}.
-	 * @param parameterSpecs A list of parameter types, in the same style as {@code classSpec}.
+	 * @param returnSpec The return type, in the same style as {@code classSpec}. For primitives,
+	 *                  use the primitive type name, such as 'int', and suffix 1 pair of array brackets per array dimension.
+	 * @param parameterSpecs A list of parameter types, in the same style as {@code returnSpec}.
 	 */
 	public MethodTarget(String classSpec, String methodName, String returnSpec, String... parameterSpecs) {
 		this(classSpec, methodName, true, returnSpec, parameterSpecs);
@@ -131,6 +133,10 @@ public final class MethodTarget {
 	 */
 	public boolean classMatches(String classSpec) {
 		return typeMatches(classSpec, this.classSpec);
+	}
+	
+	public Collection<String> getAffectedClasses() {
+		return Collections.singleton(classSpec);
 	}
 	
 	/**
@@ -208,6 +214,6 @@ public final class MethodTarget {
 	}
 	
 	public static boolean typeMatches(String type, String pattern) {
-		return type.replaceAll("[/$]", ".").equals(pattern);
+		return type.replace("/", ".").equals(pattern);
 	}
 }

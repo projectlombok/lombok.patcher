@@ -22,16 +22,15 @@
 package lombok.patcher.scripts;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Set;
 
 import lombok.NonNull;
 import lombok.ToString;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodLogistics;
-import lombok.patcher.MethodTarget;
 import lombok.patcher.PatchScript;
 import lombok.patcher.StackRequest;
+import lombok.patcher.TargetMatcher;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -45,7 +44,7 @@ import org.objectweb.asm.Opcodes;
  */
 @ToString
 public final class WrapReturnValuesScript extends PatchScript {
-	private final @NonNull MethodTarget targetMethod;
+	private final @NonNull TargetMatcher matcher;
 	private final @NonNull Hook wrapper;
 	private final Set<StackRequest> requests;
 	private final boolean hijackReturnValue;
@@ -58,10 +57,10 @@ public final class WrapReturnValuesScript extends PatchScript {
 	 *   helper methods if you use this!
 	 * @param requests The kinds of parameters you want your hook method to receive.
 	 */
-	WrapReturnValuesScript(MethodTarget targetMethod, Hook wrapper, boolean transplant, Set<StackRequest> requests) {
-		if (targetMethod == null) throw new NullPointerException("targetMethod");
+	WrapReturnValuesScript(TargetMatcher matcher, Hook wrapper, boolean transplant, Set<StackRequest> requests) {
+		if (matcher == null) throw new NullPointerException("matcher");
 		if (wrapper == null) throw new NullPointerException("wrapper");
-		this.targetMethod = targetMethod;
+		this.matcher = matcher;
 		this.wrapper = wrapper;
 		this.hijackReturnValue = !wrapper.getMethodDescriptor().endsWith(")V");
 		this.requests = requests;
@@ -69,23 +68,23 @@ public final class WrapReturnValuesScript extends PatchScript {
 	}
 	
 	@Override public Collection<String> getClassesToReload() {
-		return Collections.singleton(targetMethod.getClassSpec());
+		return matcher.getAffectedClasses();
 	}
 	
 	@Override public byte[] patch(String className, byte[] byteCode) {
-		if (!targetMethod.classMatches(className)) return null;
+		if (!classMatches(className, matcher.getAffectedClasses())) return null;
 		return runASM(byteCode, true);
 	}
 	
 	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, final String classSpec) {
 		final MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
-			@Override public MethodVisitor createMethodVisitor(MethodTarget target, MethodVisitor parent, MethodLogistics logistics) {
+			@Override public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
 				return new WrapReturnValues(parent, logistics, classSpec);
 			}
 		});
 		
 		if (transplant) patcher.addTransplant(wrapper);
-		patcher.addMethodTarget(targetMethod);
+		patcher.addTargetMatcher(matcher);
 		
 		return patcher;
 	}

@@ -22,15 +22,14 @@
 package lombok.patcher.scripts;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Set;
 
 import lombok.NonNull;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodLogistics;
-import lombok.patcher.MethodTarget;
 import lombok.patcher.PatchScript;
 import lombok.patcher.StackRequest;
+import lombok.patcher.TargetMatcher;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -44,15 +43,15 @@ import org.objectweb.asm.Opcodes;
  * the method continue.
  */
 public class ExitFromMethodEarlyScript extends PatchScript {
-	private final @NonNull MethodTarget targetMethod;
+	private final @NonNull TargetMatcher matcher;
 	private final @NonNull Hook decisionWrapper, valueWrapper;
 	private final Set<StackRequest> requests;
 	private final boolean transplant;
 	
-	ExitFromMethodEarlyScript(MethodTarget targetMethod, Hook decisionWrapper, Hook valueWrapper, boolean transplant, Set<StackRequest> requests) {
-		if (targetMethod == null) throw new NullPointerException("targetMethod");
+	ExitFromMethodEarlyScript(TargetMatcher matcher, Hook decisionWrapper, Hook valueWrapper, boolean transplant, Set<StackRequest> requests) {
+		if (matcher == null) throw new NullPointerException("matcher");
 		if (decisionWrapper == null) throw new NullPointerException("decisionWrapper");
-		this.targetMethod = targetMethod;
+		this.matcher = matcher;
 		this.decisionWrapper = decisionWrapper;
 		this.valueWrapper = valueWrapper;
 		this.requests = requests;
@@ -60,19 +59,19 @@ public class ExitFromMethodEarlyScript extends PatchScript {
 	}
 	
 	@Override public Collection<String> getClassesToReload() {
-		return Collections.singleton(targetMethod.getClassSpec());
+		return matcher.getAffectedClasses();
 	}
 	
 	@Override public byte[] patch(String className, byte[] byteCode) {
-		if (!targetMethod.classMatches(className)) return null;
+		if (!classMatches(className, matcher.getAffectedClasses())) return null;
 		return runASM(byteCode, true);
 	}
 	
 	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, final String classSpec) {
 		MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
-			@Override public MethodVisitor createMethodVisitor(MethodTarget target, MethodVisitor parent, MethodLogistics logistics) {
+			@Override public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
 				if (logistics.getReturnOpcode() != Opcodes.RETURN && valueWrapper == null) {
-					throw new IllegalStateException("method " + targetMethod.getMethodName() + " must return something, but " +
+					throw new IllegalStateException("method " + name + desc + " must return something, but " +
 							"you did not provide a value hook method.");
 				}
 				return new ExitEarly(parent, logistics, classSpec);
@@ -83,7 +82,7 @@ public class ExitFromMethodEarlyScript extends PatchScript {
 			patcher.addTransplant(decisionWrapper);
 			if (valueWrapper != null) patcher.addTransplant(valueWrapper);
 		}
-		patcher.addMethodTarget(targetMethod);
+		patcher.addTargetMatcher(matcher);
 		return patcher;
 	}
 	

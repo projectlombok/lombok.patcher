@@ -57,12 +57,12 @@ public class TestMethodTarget {
 	
 	@Test
 	public void fullSpecMatch() {
-		MethodTarget toLowerCase = new MethodTarget("java.lang.String", "toLowerCase", "java.lang.String");
-		MethodTarget mapPut = new MethodTarget("java.util.Map", "put", "java.lang.Object", "java.lang.Object", "java.lang.Object");
-		MethodTarget listAdd = new MethodTarget("java.util.List", "add", "boolean", "java.lang.Object");
-		MethodTarget listToArray1 = new MethodTarget("java.util.ArrayList", "toArray", "java.lang.Object[]");
-		MethodTarget listToArray2 = new MethodTarget("java.util.ArrayList", "toArray", "java.lang.Object[]", "java.lang.Object[]");
-		MethodTarget threadSleep2 = new MethodTarget("java.lang.Thread", "sleep", "void", "long", "int");
+		TargetMatcher toLowerCase = new MethodTarget("java.lang.String", "toLowerCase", "java.lang.String");
+		TargetMatcher mapPut = new MethodTarget("java.util.Map", "put", "java.lang.Object", "java.lang.Object", "java.lang.Object");
+		TargetMatcher listAdd = new MethodTarget("java.util.List", "add", "boolean", "java.lang.Object");
+		TargetMatcher listToArray1 = new MethodTarget("java.util.ArrayList", "toArray", "java.lang.Object[]");
+		TargetMatcher listToArray2 = new MethodTarget("java.util.ArrayList", "toArray", "java.lang.Object[]", "java.lang.Object[]");
+		TargetMatcher threadSleep2 = new MethodTarget("java.lang.Thread", "sleep", "void", "long", "int");
 		
 		assertTrue(toLowerCase.matches("java/lang/String", "toLowerCase", "()Ljava/lang/String;"));
 		assertTrue(mapPut.matches("java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"));
@@ -77,11 +77,11 @@ public class TestMethodTarget {
 	
 	@Test
 	public void partialSpecMatch() {
-		MethodTarget toLowerCase = new MethodTarget("java.lang.String", "toLowerCase");
-		MethodTarget mapPut = new MethodTarget("java.util.Map", "put");
-		MethodTarget listAdd = new MethodTarget("java.util.List", "add");
-		MethodTarget listToArray = new MethodTarget("java.util.ArrayList", "toArray");
-		MethodTarget threadSleep = new MethodTarget("java.lang.Thread", "sleep");
+		TargetMatcher toLowerCase = new MethodTarget("java.lang.String", "toLowerCase");
+		TargetMatcher mapPut = new MethodTarget("java.util.Map", "put");
+		TargetMatcher listAdd = new MethodTarget("java.util.List", "add");
+		TargetMatcher listToArray = new MethodTarget("java.util.ArrayList", "toArray");
+		TargetMatcher threadSleep = new MethodTarget("java.lang.Thread", "sleep");
 		
 		assertTrue(toLowerCase.matches("java/lang/String", "toLowerCase", "()Ljava/lang/String;"));
 		assertTrue(mapPut.matches("java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"));

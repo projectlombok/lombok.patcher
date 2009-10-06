@@ -60,6 +60,14 @@ public abstract class PatchScript {
 	 */
 	public abstract Collection<String> getClassesToReload();
 	
+	public static boolean classMatches(String className, Collection<String> classSpecs) {
+		for (String classSpec : classSpecs) {
+			if (MethodTarget.typeMatches(className, classSpec)) return true;
+		}
+		
+		return false;
+	}
+	
 	/**
 	 * Transforms the class. You may return {@code null} if you have no interest in transforming this particular class.
 	 */
@@ -91,8 +99,14 @@ public abstract class PatchScript {
 	public interface MethodPatcherFactory {
 		/**
 		 * Supply a {@code MethodVisitor} that knows how to process the provided method.
+		 * 
+		 * @param methodName the name of the method.
+		 * @param methodDescription the description of the method, such as (II)V (method takes 2 ints as parameters and returns void).
+		 * @param parent the visitor that will write to the actual class file.
+		 * @param logistics contains useful methods for interacting with the method, such as generating the opcode to
+		 *                  put a certain parameter on the stack.
 		 */
-		public MethodVisitor createMethodVisitor(MethodTarget target, MethodVisitor parent, MethodLogistics logistics);
+		public MethodVisitor createMethodVisitor(String methodName, String methodDescription, MethodVisitor parent, MethodLogistics logistics);
 	}
 	
 	protected static void transplantMethod(final Hook methodToTransplant, final ClassVisitor target) throws IOException {
@@ -131,7 +145,7 @@ public abstract class PatchScript {
 	 * want to rewrite one or more methods.
 	 */
 	protected static class MethodPatcher extends ClassAdapter {
-		private List<MethodTarget> targets = new ArrayList<MethodTarget>();
+		private List<TargetMatcher> targets = new ArrayList<TargetMatcher>();
 		private @Getter String ownClassSpec;
 		private final MethodPatcherFactory factory;
 		private List<Hook> transplants = new ArrayList<Hook>();
@@ -144,7 +158,7 @@ public abstract class PatchScript {
 		/**
 		 * The {@code factory} will be called for any methods that match any added target.
 		 */
-		public void addMethodTarget(MethodTarget t) {
+		public void addTargetMatcher(TargetMatcher t) {
 			targets.add(t);
 		}
 		
@@ -179,9 +193,9 @@ public abstract class PatchScript {
 				}
 			}
 			
-			for (MethodTarget t : targets) {
+			for (TargetMatcher t : targets) {
 				if (t.matches(ownClassSpec, name, desc)) {
-					return factory.createMethodVisitor(t, visitor, new MethodLogistics(access, desc));
+					return factory.createMethodVisitor(name, desc, visitor, new MethodLogistics(access, desc));
 				}
 			}
 			

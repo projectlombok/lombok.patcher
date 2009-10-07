@@ -52,7 +52,7 @@ public class TestMethodTarget {
 	
 	@Test
 	public void innerClassTypeMatching() {
-		assertTrue(MethodTarget.typeSpecMatch("[Ljava/util/Map$Entry;", "java.util.Map.Entry[]"));
+		assertTrue(MethodTarget.typeSpecMatch("[Ljava/util/Map$Entry;", "java.util.Map$Entry[]"));
 	}
 	
 	@Test

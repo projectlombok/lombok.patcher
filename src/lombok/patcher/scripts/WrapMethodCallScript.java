@@ -26,6 +26,7 @@ import java.util.Set;
 
 import lombok.patcher.Hook;
 import lombok.patcher.MethodLogistics;
+import lombok.patcher.MethodTarget;
 import lombok.patcher.PatchScript;
 import lombok.patcher.StackRequest;
 import lombok.patcher.TargetMatcher;
@@ -37,24 +38,28 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 /**
- * Replaces all calls to a given method with another (static) method. It is your job to ensure both all parameters and the
- * return type are perfectly compatible. If you're replacing an instance method, make sure your static method's first
- * parameter is type-compatible with the LHS of the instance method. You must also return something that is compatible with
- * the method you're replacing.
+ * Inserts a method call to your static method immediately after any method call to a given method. You can inspect the returned
+ * value (if any) and choose to replace it with a new one if you want.
+ * <p>
+ * The first parameter must always be type compatible with the return value of the method you're wrapping. Omit it if you're
+ * wrapping a method that returns void. You can also get a reference to the 'this' context, if you're modifying a non-static method,
+ * as well as any parameters to the original method you're modifying (*NOT* to the method call that you're trying to wrap!)
  */
-public class ReplaceMethodCallScript extends PatchScript {
+public class WrapMethodCallScript extends PatchScript {
 	private final TargetMatcher matcher;
 	private final Hook wrapper;
-	private final Hook methodToReplace;
+	private final Hook callToWrap;
 	private final boolean transplant;
+	private final boolean leaveReturnValueIntact;
 	private final Set<StackRequest> extraRequests;
-
-	ReplaceMethodCallScript(TargetMatcher matcher, Hook callToReplace, Hook wrapper, boolean transplant, Set<StackRequest> extraRequests) {
+	
+	WrapMethodCallScript(TargetMatcher matcher, Hook callToWrap, Hook wrapper, boolean transplant, Set<StackRequest> extraRequests) {
 		if (matcher == null) throw new NullPointerException("matcher");
-		if (callToReplace == null) throw new NullPointerException("callToReplace");
+		if (callToWrap == null) throw new NullPointerException("callToWrap");
 		if (wrapper == null) throw new NullPointerException("wrapper");
 		this.matcher = matcher;
-		this.methodToReplace = callToReplace;
+		this.leaveReturnValueIntact = wrapper.getMethodDescriptor().endsWith(")V") && !callToWrap.getMethodDescriptor().endsWith(")V");
+		this.callToWrap = callToWrap;
 		this.wrapper = wrapper;
 		this.transplant = transplant;
 		this.extraRequests = extraRequests;
@@ -93,7 +98,12 @@ public class ReplaceMethodCallScript extends PatchScript {
 		}
 		
 		@Override public void visitMethodInsn(int opcode, String owner, String name, String desc) {
-			if (methodToReplace.getMethodName().equals(name) && methodToReplace.getMethodDescriptor().equals(desc)) {
+			super.visitMethodInsn(opcode, owner, name, desc);
+			if (leaveReturnValueIntact) {
+				MethodLogistics.generateDupForType(MethodTarget.decomposeFullDesc(callToWrap.getMethodDescriptor()).get(0), mv);
+			}
+			
+			if (callToWrap.getMethodName().equals(name) && callToWrap.getMethodDescriptor().equals(desc)) {
 				if (extraRequests.contains(StackRequest.THIS)) logistics.generateLoadOpcodeForThis(mv);
 				for (StackRequest param : StackRequest.PARAMS_IN_ORDER) {
 					if (!extraRequests.contains(param)) continue;
@@ -101,8 +111,6 @@ public class ReplaceMethodCallScript extends PatchScript {
 				}
 				super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : wrapper.getClassSpec(),
 						wrapper.getMethodName(), wrapper.getMethodDescriptor());
-			} else {
-				super.visitMethodInsn(opcode, owner, name, desc);
 			}
 		}
 	}

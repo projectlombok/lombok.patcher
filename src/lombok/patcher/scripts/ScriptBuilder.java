@@ -170,6 +170,7 @@ public class ScriptBuilder {
 		private TargetMatcher matcher;
 		private Hook replacementMethod;
 		private Hook methodToReplace;
+		private Set<StackRequest> extraRequests = new HashSet<StackRequest>();
 		private boolean transplant;
 		
 		public ReplaceMethodCallScript build() {
@@ -177,7 +178,7 @@ public class ScriptBuilder {
 			if (replacementMethod == null) throw new IllegalStateException("You have to set a replacement method");
 			if (methodToReplace == null) throw new IllegalStateException("You have to set a method call to replace");
 			
-			return new ReplaceMethodCallScript(matcher, methodToReplace, replacementMethod, transplant);
+			return new ReplaceMethodCallScript(matcher, methodToReplace, replacementMethod, transplant, extraRequests);
 		}
 		
 		public ReplaceMethodCallBuilder target(TargetMatcher matcher) {
@@ -197,6 +198,62 @@ public class ScriptBuilder {
 		
 		public ReplaceMethodCallBuilder transplant() {
 			this.transplant = true;
+			return this;
+		}
+		
+		public ReplaceMethodCallBuilder requestExtra(StackRequest... requests) {
+			for (StackRequest r : requests) {
+				if (r == StackRequest.RETURN_VALUE) throw new IllegalArgumentException(
+						"You cannot ask for the tentative return value in ReplaceMethodCallScript.");
+				this.extraRequests.add(r);
+			}
+			
+			return this;
+		}
+	}
+	
+	public static class WrapMethodCallBuilder {
+		private TargetMatcher matcher;
+		private Hook replacementMethod;
+		private Hook methodToWrap;
+		private Set<StackRequest> extraRequests = new HashSet<StackRequest>();
+		private boolean transplant;
+		
+		public WrapMethodCallScript build() {
+			if (matcher == null) throw new IllegalStateException("You have to set a target method matcher");
+			if (replacementMethod == null) throw new IllegalStateException("You have to set a replacement method");
+			if (methodToWrap == null) throw new IllegalStateException("You have to set a method call to wrap");
+			
+			return new WrapMethodCallScript(matcher, methodToWrap, replacementMethod, transplant, extraRequests);
+		}
+		
+		public WrapMethodCallBuilder target(TargetMatcher matcher) {
+			this.matcher = matcher;
+			return this;
+		}
+		
+		public WrapMethodCallBuilder replacementMethod(Hook hook) {
+			this.replacementMethod = hook;
+			return this;
+		}
+		
+		public WrapMethodCallBuilder methodToWrap(Hook hook) {
+			this.methodToWrap = hook;
+			return this;
+		}
+		
+		public WrapMethodCallBuilder transplant() {
+			this.transplant = true;
+			return this;
+		}
+		
+		public WrapMethodCallBuilder requestExtra(StackRequest... requests) {
+			for (StackRequest r : requests) {
+				if (r == StackRequest.RETURN_VALUE) throw new IllegalArgumentException(
+						"You cannot ask for the tentative return value in WrapMethodCallBuilder.");
+				this.extraRequests.add(r);
+			}
+			
 			return this;
 		}
 	}
@@ -255,6 +312,13 @@ public class ScriptBuilder {
 	 */
 	public static ReplaceMethodCallBuilder replaceMethodCall() {
 		return new ReplaceMethodCallBuilder();
+	}
+	
+	/**
+	 * Allows you to inspect and optionally replace the result of calls to a given method in a given method.
+	 */
+	public static WrapMethodCallBuilder wrapMethodCall() {
+		return new WrapMethodCallBuilder();
 	}
 	
 	/**

@@ -36,4 +36,8 @@ public class Hook {
 	private final @NonNull String classSpec;
 	private final @NonNull String methodName;
 	private final @NonNull String methodDescriptor;
+	
+	public boolean isConstructor() {
+		return "<init>".equals(methodName);
+	}
 }

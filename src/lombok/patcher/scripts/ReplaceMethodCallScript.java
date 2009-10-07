@@ -93,7 +93,9 @@ public class ReplaceMethodCallScript extends PatchScript {
 		}
 		
 		@Override public void visitMethodInsn(int opcode, String owner, String name, String desc) {
-			if (methodToReplace.getMethodName().equals(name) && methodToReplace.getMethodDescriptor().equals(desc)) {
+			if (methodToReplace.getClassSpec().equals(owner) &&
+			    methodToReplace.getMethodName().equals(name) &&
+			    methodToReplace.getMethodDescriptor().equals(desc)) {
 				if (extraRequests.contains(StackRequest.THIS)) logistics.generateLoadOpcodeForThis(mv);
 				for (StackRequest param : StackRequest.PARAMS_IN_ORDER) {
 					if (!extraRequests.contains(param)) continue;

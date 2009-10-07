@@ -58,7 +58,7 @@ public class WrapMethodCallScript extends PatchScript {
 		if (callToWrap == null) throw new NullPointerException("callToWrap");
 		if (wrapper == null) throw new NullPointerException("wrapper");
 		this.matcher = matcher;
-		this.leaveReturnValueIntact = wrapper.getMethodDescriptor().endsWith(")V") && !callToWrap.getMethodDescriptor().endsWith(")V");
+		this.leaveReturnValueIntact = wrapper.getMethodDescriptor().endsWith(")V") && (!callToWrap.getMethodDescriptor().endsWith(")V") || callToWrap.isConstructor());
 		this.callToWrap = callToWrap;
 		this.wrapper = wrapper;
 		this.transplant = transplant;
@@ -99,11 +99,13 @@ public class WrapMethodCallScript extends PatchScript {
 		
 		@Override public void visitMethodInsn(int opcode, String owner, String name, String desc) {
 			super.visitMethodInsn(opcode, owner, name, desc);
-			if (leaveReturnValueIntact) {
-				MethodLogistics.generateDupForType(MethodTarget.decomposeFullDesc(callToWrap.getMethodDescriptor()).get(0), mv);
-			}
-			
-			if (callToWrap.getMethodName().equals(name) && callToWrap.getMethodDescriptor().equals(desc)) {
+			if (callToWrap.getClassSpec().equals(owner) &&
+			    callToWrap.getMethodName().equals(name) &&
+			    callToWrap.getMethodDescriptor().equals(desc)) {
+				if (leaveReturnValueIntact) {
+					if (callToWrap.isConstructor()) mv.visitInsn(Opcodes.DUP);
+					else MethodLogistics.generateDupForType(MethodTarget.decomposeFullDesc(callToWrap.getMethodDescriptor()).get(0), mv);
+				}
 				if (extraRequests.contains(StackRequest.THIS)) logistics.generateLoadOpcodeForThis(mv);
 				for (StackRequest param : StackRequest.PARAMS_IN_ORDER) {
 					if (!extraRequests.contains(param)) continue;

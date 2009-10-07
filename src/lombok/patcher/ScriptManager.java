@@ -25,6 +25,9 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.InvocationTargetException;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -66,6 +69,12 @@ public class ScriptManager {
 		}
 	}
 	
+	private static final String DEBUG_PATCHING;
+	
+	static {
+		DEBUG_PATCHING = System.getProperty("lombok.patcher.patchDebugDir", null);
+	}
+	
 	private final ClassFileTransformer transformer = new ClassFileTransformer() {
 		@Override public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 			byte[] byteCode = classfileBuffer;
@@ -83,6 +92,18 @@ public class ScriptManager {
 				if (transformed != null) {
 					patched = true;
 					byteCode = transformed;
+				}
+			}
+			if (patched && DEBUG_PATCHING != null) {
+				try {
+					File f = new File(DEBUG_PATCHING, className + ".class");
+					f.getParentFile().mkdirs();
+					FileOutputStream fos = new FileOutputStream(f);
+					fos.write(byteCode);
+					fos.close();
+				} catch (IOException e) {
+					System.err.println("Can't log patch result.");
+					e.printStackTrace();
 				}
 			}
 			return patched ? byteCode : null;

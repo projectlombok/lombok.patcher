@@ -66,16 +66,20 @@ public class ScriptManager {
 		}
 	}
 	
-	public void injectAndReload() {
-		//TODO JNI grappen
-	}
-	
 	private final ClassFileTransformer transformer = new ClassFileTransformer() {
 		@Override public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 			byte[] byteCode = classfileBuffer;
 			boolean patched = false;
 			for (PatchScript script : scripts) {
-				byte[] transformed = script.patch(className, byteCode);
+				byte[] transformed = null;
+				try {
+					transformed = script.patch(className, byteCode);
+				} catch (Throwable t) {
+					//Exceptions get silently swallowed by instrumentation, so this is a slight improvement.
+					System.err.printf("Transformer %s failed on %s. Trace:\n", script.getPatchScriptName(), className);
+					t.printStackTrace();
+					transformed = null;
+				}
 				if (transformed != null) {
 					patched = true;
 					byteCode = transformed;

@@ -4,8 +4,12 @@
 	<classpathentry kind="src" path="test"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
-	<classpathentry kind="lib" path="lib/asm-3.1.jar"/>
 	<classpathentry kind="lib" path="deps/lombok.jar"/>
 	<classpathentry kind="lib" path="lib/jna.jar"/>
+	<classpathentry kind="lib" path="lib/asm-trunk-20091006.jar" sourcepath="contrib/asm-trunk-20091006-src.zip">
+		<attributes>
+			<attribute name="javadoc_location" value="http://asm.ow2.org/current/doc/javadoc/user/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

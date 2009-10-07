@@ -79,7 +79,17 @@ public abstract class PatchScript {
 	 */
 	protected byte[] runASM(byte[] byteCode, boolean computeMaxS) {
 		ClassReader reader = new ClassReader(byteCode);
-		ClassWriter writer = new ClassWriter(reader, computeMaxS ? ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES : 0);
+		ClassWriter writer = new ClassWriter(reader, computeMaxS ? ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES : 0) {
+			@Override protected String getCommonSuperClass(String type1, String type2) {
+				//By default, ASM will attempt to live-load the class types, which will fail if meddling with classes in an
+				//environment with custom classloaders, such as Equinox. It's just an optimization; returning Object is always legal.
+				try {
+					return super.getCommonSuperClass(type1, type2);
+				} catch (Exception e) {
+					return "java/lang/Object";
+				}
+			}
+		};
 		
 		ClassVisitor visitor = createClassVisitor(writer, reader.getClassName());
 		reader.accept(visitor, 0);

@@ -141,6 +141,28 @@ public class MethodLogistics {
 		mv.visitInsn(returnSize == 2 ? Opcodes.DUP2 : Opcodes.DUP);
 	}
 	
+	/**
+	 * Generates an instruction to duplicate an object on the stack. The object is of the stated type, in JVM typespec, so
+	 * {@code I} refers to an integer, and {@code Ljava/lang/Object;} would refer to an object.
+	 * 
+	 * @param type A type spec in JVM format.
+	 * @param mv This visitor will be given the call to visit DUP2, DUP, or nothing dependent on the type name.
+	 */
+	public static void generateDupForType(String type, MethodVisitor mv) {
+		switch (sizeOf(type)) {
+		default:
+		case 1:
+			mv.visitInsn(Opcodes.DUP);
+			break;
+		case 2:
+			mv.visitInsn(Opcodes.DUP2);
+			break;
+		case 0:
+			//Do nothing
+			break;
+		}
+	}
+	
 	private static int loadOpcodeFor(String spec) {
 		switch (spec.charAt(0)) {
 		case 'D':

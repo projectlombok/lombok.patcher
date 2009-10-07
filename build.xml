@@ -10,8 +10,15 @@
 		</fileset>
 	</path>
 	
+	<target name="-pointlessCheck">
+		<uptodate property="pointless" targetfile="dist/lombok-patcher.jar">
+			<srcfiles dir="." includes="src/**/*.java test/**/*.java lib/**" />
+		</uptodate>
+	</target>
+	
 	<target name="clean" description="Deletes build artefacts">
 		<delete dir="build" quiet="true" />
+		<delete dir="dist" quiet="true" />
 	</target>
 	
 	<target name="version" description="Shows the version number">
@@ -31,7 +38,7 @@
 		<echo level="info">Lombok patcher version: ${lombok.patcher.version}</echo>
 	</target>
 	
-	<target name="compile" description="Compiles lombok.patcher">
+	<target name="compile" description="Compiles lombok.patcher" depends="-pointlessCheck" unless="pointless">
 		<mkdir dir="build/pack" />
 		<javac srcdir="src" debug="on" destdir="build/pack" target="1.5">
 			<classpath refid="patcher.deps.path" />
@@ -48,7 +55,7 @@
 		</unjar>
 	</target>
 	
-	<target name="compileTests" depends="compile" description="Compiles the unit tests">
+	<target name="compileTests" depends="compile, -pointlessCheck" description="Compiles the unit tests" unless="pointless">
 		<mkdir dir="build/tests" />
 		<javac srcdir="test" debug="on" destdir="build/tests" target="1.5">
 			<classpath refid="patcher.deps.path" />
@@ -56,7 +63,7 @@
 		</javac>
 	</target>
 	
-	<target name="-test">
+	<target name="-test" depends="-pointlessCheck" unless="pointless">
 		<antcall target="test">
 			<param name="tests.quiet" value="true" />
 		</antcall>
@@ -77,14 +84,9 @@
 		<property name="tests.run" value="true" />
 	</target>
 	
-	<target name="dist" depends="-test, version, compile" description="Creates the distributable">
+	<target name="dist" depends="-pointlessCheck, -test, version, compile" unless="pointless" description="Creates the distributable">
 		<mkdir dir="dist" />
-		<jar basedir="build/pack" destfile="dist/lombok-patcher-${lombok.patcher.version}.jar">
-<!--			<manifest>
-				<attribute name="Premain-Class" value="lombok.patcher.Agent" />
-				<attribute name="Can-Redefine-Classes" value="true" />
-			</manifest>-->
-		</jar>
+		<jar basedir="build/pack" destfile="dist/lombok-patcher-${lombok.patcher.version}.jar" />
 		<copy file="dist/lombok-patcher-${lombok.patcher.version}.jar" tofile="dist/lombok-patcher.jar" />
 	</target>
 </project>

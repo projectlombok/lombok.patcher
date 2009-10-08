@@ -21,17 +21,15 @@
  */
 package lombok.patcher.scripts;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 import lombok.NonNull;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodLogistics;
-import lombok.patcher.PatchScript;
 import lombok.patcher.StackRequest;
 import lombok.patcher.TargetMatcher;
 
-import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodAdapter;
@@ -42,32 +40,21 @@ import org.objectweb.asm.Opcodes;
  * Receive (optional) 'this' reference as well as any parameters, then choose to return early with provided value, or let
  * the method continue.
  */
-public class ExitFromMethodEarlyScript extends PatchScript {
-	private final @NonNull TargetMatcher matcher;
+public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 	private final @NonNull Hook decisionWrapper, valueWrapper;
 	private final Set<StackRequest> requests;
 	private final boolean transplant;
 	
-	ExitFromMethodEarlyScript(TargetMatcher matcher, Hook decisionWrapper, Hook valueWrapper, boolean transplant, Set<StackRequest> requests) {
-		if (matcher == null) throw new NullPointerException("matcher");
+	ExitFromMethodEarlyScript(List<TargetMatcher> matchers, Hook decisionWrapper, Hook valueWrapper, boolean transplant, Set<StackRequest> requests) {
+		super(matchers);
 		if (decisionWrapper == null) throw new NullPointerException("decisionWrapper");
-		this.matcher = matcher;
 		this.decisionWrapper = decisionWrapper;
 		this.valueWrapper = valueWrapper;
 		this.requests = requests;
 		this.transplant = transplant;
 	}
 	
-	@Override public Collection<String> getClassesToReload() {
-		return matcher.getAffectedClasses();
-	}
-	
-	@Override public byte[] patch(String className, byte[] byteCode) {
-		if (!classMatches(className, matcher.getAffectedClasses())) return null;
-		return runASM(byteCode, true);
-	}
-	
-	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, final String classSpec) {
+	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec) {
 		MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
 			@Override public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
 				if (logistics.getReturnOpcode() != Opcodes.RETURN && valueWrapper == null) {
@@ -82,7 +69,6 @@ public class ExitFromMethodEarlyScript extends PatchScript {
 			patcher.addTransplant(decisionWrapper);
 			if (valueWrapper != null) patcher.addTransplant(valueWrapper);
 		}
-		patcher.addTargetMatcher(matcher);
 		return patcher;
 	}
 	

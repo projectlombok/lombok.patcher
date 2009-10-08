@@ -21,7 +21,9 @@
  */
 package lombok.patcher.scripts;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import lombok.patcher.Hook;
@@ -123,20 +125,20 @@ public class ScriptBuilder {
 	}
 	
 	public static class ExitEarlyBuilder {
-		private TargetMatcher matcher;
+		private List<TargetMatcher> matchers = new ArrayList<TargetMatcher>();
 		private Hook decisionMethod, valueMethod;
 		private Set<StackRequest> requests = new HashSet<StackRequest>();
 		private boolean transplant;
 		
 		public ExitFromMethodEarlyScript build() {
-			if (matcher == null) throw new IllegalStateException("You have to set a target method matcher");
+			if (matchers.isEmpty()) throw new IllegalStateException("You have to set a target method matcher");
 			if (decisionMethod == null) throw new IllegalStateException("You have to set a decision method");
 			
-			return new ExitFromMethodEarlyScript(matcher, decisionMethod, valueMethod, transplant, requests);
+			return new ExitFromMethodEarlyScript(matchers, decisionMethod, valueMethod, transplant, requests);
 		}
 		
 		public ExitEarlyBuilder target(TargetMatcher matcher) {
-			this.matcher = matcher;
+			this.matchers.add(matcher);
 			return this;
 		}
 		
@@ -167,22 +169,22 @@ public class ScriptBuilder {
 	}
 	
 	public static class ReplaceMethodCallBuilder {
-		private TargetMatcher matcher;
+		private List<TargetMatcher> matchers = new ArrayList<TargetMatcher>();
 		private Hook replacementMethod;
 		private Hook methodToReplace;
 		private Set<StackRequest> extraRequests = new HashSet<StackRequest>();
 		private boolean transplant;
 		
 		public ReplaceMethodCallScript build() {
-			if (matcher == null) throw new IllegalStateException("You have to set a target method matcher");
+			if (matchers.isEmpty()) throw new IllegalStateException("You have to set a target method matcher");
 			if (replacementMethod == null) throw new IllegalStateException("You have to set a replacement method");
 			if (methodToReplace == null) throw new IllegalStateException("You have to set a method call to replace");
 			
-			return new ReplaceMethodCallScript(matcher, methodToReplace, replacementMethod, transplant, extraRequests);
+			return new ReplaceMethodCallScript(matchers, methodToReplace, replacementMethod, transplant, extraRequests);
 		}
 		
 		public ReplaceMethodCallBuilder target(TargetMatcher matcher) {
-			this.matcher = matcher;
+			this.matchers.add(matcher);
 			return this;
 		}
 		
@@ -213,27 +215,27 @@ public class ScriptBuilder {
 	}
 	
 	public static class WrapMethodCallBuilder {
-		private TargetMatcher matcher;
-		private Hook replacementMethod;
+		private List<TargetMatcher> matchers = new ArrayList<TargetMatcher>();
+		private Hook wrapMethod;
 		private Hook methodToWrap;
 		private Set<StackRequest> extraRequests = new HashSet<StackRequest>();
 		private boolean transplant;
 		
 		public WrapMethodCallScript build() {
-			if (matcher == null) throw new IllegalStateException("You have to set a target method matcher");
-			if (replacementMethod == null) throw new IllegalStateException("You have to set a replacement method");
+			if (matchers.isEmpty()) throw new IllegalStateException("You have to set a target method matcher");
+			if (wrapMethod == null) throw new IllegalStateException("You have to set method to wrap with");
 			if (methodToWrap == null) throw new IllegalStateException("You have to set a method call to wrap");
 			
-			return new WrapMethodCallScript(matcher, methodToWrap, replacementMethod, transplant, extraRequests);
+			return new WrapMethodCallScript(matchers, methodToWrap, wrapMethod, transplant, extraRequests);
 		}
 		
 		public WrapMethodCallBuilder target(TargetMatcher matcher) {
-			this.matcher = matcher;
+			this.matchers.add(matcher);
 			return this;
 		}
 		
-		public WrapMethodCallBuilder replacementMethod(Hook hook) {
-			this.replacementMethod = hook;
+		public WrapMethodCallBuilder wrapMethod(Hook hook) {
+			this.wrapMethod = hook;
 			return this;
 		}
 		
@@ -259,20 +261,20 @@ public class ScriptBuilder {
 	}
 	
 	public static class WrapReturnValueBuilder {
-		private TargetMatcher matcher;
+		private List<TargetMatcher> matchers = new ArrayList<TargetMatcher>();
 		private Hook wrapMethod;
 		private Set<StackRequest> requests = new HashSet<StackRequest>();
 		private boolean transplant;
 		
 		public WrapReturnValuesScript build() {
-			if (matcher == null) throw new IllegalStateException("You have to set a target method matcher");
+			if (matchers.isEmpty()) throw new IllegalStateException("You have to set a target method matcher");
 			if (wrapMethod == null) throw new IllegalStateException("You have to set a method you'd like to wrap the return values with");
 			
-			return new WrapReturnValuesScript(matcher, wrapMethod, transplant, requests);
+			return new WrapReturnValuesScript(matchers, wrapMethod, transplant, requests);
 		}
 		
 		public WrapReturnValueBuilder target(TargetMatcher matcher) {
-			this.matcher = matcher;
+			this.matchers.add(matcher);
 			return this;
 		}
 		

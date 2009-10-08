@@ -21,16 +21,14 @@
  */
 package lombok.patcher.scripts;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 import lombok.patcher.Hook;
 import lombok.patcher.MethodLogistics;
-import lombok.patcher.PatchScript;
 import lombok.patcher.StackRequest;
 import lombok.patcher.TargetMatcher;
 
-import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodAdapter;
 import org.objectweb.asm.MethodVisitor;
@@ -42,34 +40,23 @@ import org.objectweb.asm.Opcodes;
  * parameter is type-compatible with the LHS of the instance method. You must also return something that is compatible with
  * the method you're replacing.
  */
-public class ReplaceMethodCallScript extends PatchScript {
-	private final TargetMatcher matcher;
+public class ReplaceMethodCallScript extends MethodLevelPatchScript {
 	private final Hook wrapper;
 	private final Hook methodToReplace;
 	private final boolean transplant;
 	private final Set<StackRequest> extraRequests;
 
-	ReplaceMethodCallScript(TargetMatcher matcher, Hook callToReplace, Hook wrapper, boolean transplant, Set<StackRequest> extraRequests) {
-		if (matcher == null) throw new NullPointerException("matcher");
+	ReplaceMethodCallScript(List<TargetMatcher> matchers, Hook callToReplace, Hook wrapper, boolean transplant, Set<StackRequest> extraRequests) {
+		super(matchers);
 		if (callToReplace == null) throw new NullPointerException("callToReplace");
 		if (wrapper == null) throw new NullPointerException("wrapper");
-		this.matcher = matcher;
 		this.methodToReplace = callToReplace;
 		this.wrapper = wrapper;
 		this.transplant = transplant;
 		this.extraRequests = extraRequests;
 	}
 	
-	@Override public Collection<String> getClassesToReload() {
-		return matcher.getAffectedClasses();
-	}
-	
-	@Override public byte[] patch(String className, byte[] byteCode) {
-		if (!classMatches(className, matcher.getAffectedClasses())) return null;
-		return runASM(byteCode, true);
-	}
-	
-	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, final String classSpec) {
+	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec) {
 		final MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
 			@Override public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
 				return new ReplaceMethodCall(parent, classSpec, logistics);
@@ -77,7 +64,6 @@ public class ReplaceMethodCallScript extends PatchScript {
 		});
 		
 		if (transplant) patcher.addTransplant(wrapper);
-		patcher.addTargetMatcher(matcher);
 		
 		return patcher;
 	}

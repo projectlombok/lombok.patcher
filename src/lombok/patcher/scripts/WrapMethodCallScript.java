@@ -21,17 +21,15 @@
  */
 package lombok.patcher.scripts;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 import lombok.patcher.Hook;
 import lombok.patcher.MethodLogistics;
 import lombok.patcher.MethodTarget;
-import lombok.patcher.PatchScript;
 import lombok.patcher.StackRequest;
 import lombok.patcher.TargetMatcher;
 
-import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodAdapter;
 import org.objectweb.asm.MethodVisitor;
@@ -45,19 +43,17 @@ import org.objectweb.asm.Opcodes;
  * wrapping a method that returns void. You can also get a reference to the 'this' context, if you're modifying a non-static method,
  * as well as any parameters to the original method you're modifying (*NOT* to the method call that you're trying to wrap!)
  */
-public class WrapMethodCallScript extends PatchScript {
-	private final TargetMatcher matcher;
+public class WrapMethodCallScript extends MethodLevelPatchScript {
 	private final Hook wrapper;
 	private final Hook callToWrap;
 	private final boolean transplant;
 	private final boolean leaveReturnValueIntact;
 	private final Set<StackRequest> extraRequests;
 	
-	WrapMethodCallScript(TargetMatcher matcher, Hook callToWrap, Hook wrapper, boolean transplant, Set<StackRequest> extraRequests) {
-		if (matcher == null) throw new NullPointerException("matcher");
+	WrapMethodCallScript(List<TargetMatcher> matchers, Hook callToWrap, Hook wrapper, boolean transplant, Set<StackRequest> extraRequests) {
+		super(matchers);
 		if (callToWrap == null) throw new NullPointerException("callToWrap");
 		if (wrapper == null) throw new NullPointerException("wrapper");
-		this.matcher = matcher;
 		this.leaveReturnValueIntact = wrapper.getMethodDescriptor().endsWith(")V") && (!callToWrap.getMethodDescriptor().endsWith(")V") || callToWrap.isConstructor());
 		this.callToWrap = callToWrap;
 		this.wrapper = wrapper;
@@ -65,16 +61,7 @@ public class WrapMethodCallScript extends PatchScript {
 		this.extraRequests = extraRequests;
 	}
 	
-	@Override public Collection<String> getClassesToReload() {
-		return matcher.getAffectedClasses();
-	}
-	
-	@Override public byte[] patch(String className, byte[] byteCode) {
-		if (!classMatches(className, matcher.getAffectedClasses())) return null;
-		return runASM(byteCode, true);
-	}
-	
-	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, final String classSpec) {
+	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec) {
 		final MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
 			@Override public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
 				return new ReplaceMethodCall(parent, classSpec, logistics);
@@ -82,7 +69,6 @@ public class WrapMethodCallScript extends PatchScript {
 		});
 		
 		if (transplant) patcher.addTransplant(wrapper);
-		patcher.addTargetMatcher(matcher);
 		
 		return patcher;
 	}
@@ -99,6 +85,12 @@ public class WrapMethodCallScript extends PatchScript {
 		
 		@Override public void visitMethodInsn(int opcode, String owner, String name, String desc) {
 			super.visitMethodInsn(opcode, owner, name, desc);
+			if (name.equals("getMethods")) {
+				boolean rewrite = callToWrap.getClassSpec().equals(owner) &&
+			    callToWrap.getMethodName().equals(name) &&
+			    callToWrap.getMethodDescriptor().equals(desc);
+				System.out.printf("methodVisitInsn[%b]: %s %s%s........", rewrite, owner, name, desc);
+			}
 			if (callToWrap.getClassSpec().equals(owner) &&
 			    callToWrap.getMethodName().equals(name) &&
 			    callToWrap.getMethodDescriptor().equals(desc)) {

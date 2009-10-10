@@ -38,7 +38,13 @@
 		<echo level="info">Lombok patcher version: ${lombok.patcher.version}</echo>
 	</target>
 	
-	<target name="compile" description="Compiles lombok.patcher" depends="-pointlessCheck" unless="pointless">
+	<target name="unpackLibs" unless="pointless">
+		<unjar dest="build/pack">
+			<path refid="patcher.libs.path" />
+		</unjar>
+	</target>
+	
+	<target name="compile" depends="unpackLibs" description="Compiles lombok.patcher" unless="pointless">
 		<mkdir dir="build/pack" />
 		<javac srcdir="src" debug="on" destdir="build/pack" target="1.5">
 			<classpath refid="patcher.deps.path" />
@@ -50,12 +56,9 @@
 				<exclude name="**/*.class" />
 			</fileset>
 		</copy>
-		<unjar dest="build/pack">
-			<path refid="patcher.libs.path" />
-		</unjar>
 	</target>
 	
-	<target name="compileTests" depends="compile, -pointlessCheck" description="Compiles the unit tests" unless="pointless">
+	<target name="compileTests" depends="compile" description="Compiles the unit tests" unless="pointless">
 		<mkdir dir="build/tests" />
 		<javac srcdir="test" debug="on" destdir="build/tests" target="1.5">
 			<classpath refid="patcher.deps.path" />
@@ -63,13 +66,11 @@
 		</javac>
 	</target>
 	
-	<target name="-test" depends="-pointlessCheck" unless="pointless">
-		<antcall target="test">
-			<param name="tests.quiet" value="true" />
-		</antcall>
+	<target name="-test.quiet">
+		<property name="tests.quiet" value="true" />
 	</target>
 	
-	<target name="test" depends="compile, compileTests" unless="tests.run" description="Runs the unit tests">
+	<target name="-test" depends="compileTests" unless="pointless">
 		<junit haltonfailure="yes" fork="on">
 			<formatter type="brief" usefile="false" unless="tests.quiet" />
 			<classpath refid="patcher.deps.path" />
@@ -81,10 +82,11 @@
 				</fileset>
 			</batchtest>
 		</junit>
-		<property name="tests.run" value="true" />
 	</target>
 	
-	<target name="dist" depends="-pointlessCheck, -test, version, compile" unless="pointless" description="Creates the distributable">
+	<target name="test" depends="-test" description="Runs the unit tests" />
+	
+	<target name="dist" depends="-pointlessCheck, -test.quiet, -test, version, compile" unless="pointless" description="Creates the distributable">
 		<mkdir dir="dist" />
 		<jar basedir="build/pack" destfile="dist/lombok-patcher-${lombok.patcher.version}.jar" />
 		<copy file="dist/lombok-patcher-${lombok.patcher.version}.jar" tofile="dist/lombok-patcher.jar" />

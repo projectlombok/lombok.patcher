@@ -77,9 +77,9 @@ public abstract class PatchScript {
 	 * Runs ASM on the provider byteCode, chaining a reader to a writer and using the {@code ClassVisitor} you yourself provide
 	 * via the {@see #createClassVisitor(ClassWriter)} method as the filter.
 	 */
-	protected byte[] runASM(byte[] byteCode, boolean computeMaxS) {
+	protected byte[] runASM(byte[] byteCode, boolean computeFrames) {
 		ClassReader reader = new ClassReader(byteCode);
-		ClassWriter writer = new ClassWriter(reader, computeMaxS ? ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES : 0) {
+		ClassWriter writer = new ClassWriter(reader, computeFrames ? ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES : 0) {
 			@Override protected String getCommonSuperClass(String type1, String type2) {
 				//By default, ASM will attempt to live-load the class types, which will fail if meddling with classes in an
 				//environment with custom classloaders, such as Equinox. It's just an optimization; returning Object is always legal.

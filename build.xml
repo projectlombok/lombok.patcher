@@ -72,7 +72,7 @@
 	
 	<target name="-test" depends="compileTests" unless="pointless">
 		<junit haltonfailure="yes" fork="on">
-			<formatter type="brief" usefile="false" unless="tests.quiet" />
+			<formatter type="plain" usefile="false" unless="tests.quiet" />
 			<classpath refid="patcher.deps.path" />
 			<classpath path="build/pack" />
 			<classpath path="build/tests" />
@@ -82,6 +82,7 @@
 				</fileset>
 			</batchtest>
 		</junit>
+		<echo level="info">All tests successful.</echo>
 	</target>
 	
 	<target name="test" depends="-test" description="Runs the unit tests" />

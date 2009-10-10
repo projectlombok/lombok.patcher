@@ -295,6 +295,35 @@ public class ScriptBuilder {
 		}
 	}
 	
+	public static class SetSymbolDuringMethodCallBuilder {
+		private List<TargetMatcher> matchers = new ArrayList<TargetMatcher>();
+		private Hook callToWrap;
+		private String symbol;
+		
+		public SetSymbolDuringMethodCallScript build() {
+			if (matchers.isEmpty()) throw new IllegalStateException("You have to set a target method matcher");
+			if (callToWrap == null) throw new IllegalStateException("You have to set a method that needs to set the symbol during its invocation");
+			if (symbol == null) throw new IllegalStateException("You have to specify the symbol that is on the stack during callToWrap's invocation");
+			
+			return new SetSymbolDuringMethodCallScript(matchers, callToWrap, symbol);
+		}
+		
+		public SetSymbolDuringMethodCallBuilder target(TargetMatcher matcher) {
+			this.matchers.add(matcher);
+			return this;
+		}
+		
+		public SetSymbolDuringMethodCallBuilder callToWrap(Hook callToWrap) {
+			this.callToWrap = callToWrap;
+			return this;
+		}
+		
+		public SetSymbolDuringMethodCallBuilder symbol(String symbol) {
+			this.symbol = symbol;
+			return this;
+		}
+	}
+	
 	/**
 	 * Adds a field to any class.
 	 */
@@ -328,5 +357,12 @@ public class ScriptBuilder {
 	 */
 	public static WrapReturnValueBuilder wrapReturnValue() {
 		return new WrapReturnValueBuilder();
+	}
+	
+	/**
+	 * Allows you to push a symbol for the duration of all calls to method A in method B.
+	 */
+	public static SetSymbolDuringMethodCallBuilder setSymbolDuringMethodCall() {
+		return new SetSymbolDuringMethodCallBuilder();
 	}
 }

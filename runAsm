@@ -1,0 +1,20 @@
+#!/bin/bash
+if [ "$1" == "check" ]; then
+	APP="CheckClassAdapter"
+elif [ "$1" == "asmify" ]; then
+	APP="ASMifierClassVisitor"
+elif [ "$1" == "trace" ]; then
+	APP="TraceClassVisitor"
+else
+	echo "Runs ASM's various utilities."
+	echo "usage: runAsm AppName ClassName"
+	echo "legal appnames:"
+	echo "check  - runs CheckClassAdapter - like the java class verifier, but more verbose."
+	echo "asmify - runs ASMifier          - prints the ASM code needed to recreate a given class file."
+	echo "trace  - Runs Trace             - decompiles a given class."
+	exit 0
+fi
+
+shift
+
+java -cp "lib/*" org.objectweb.asm.util.$APP $@

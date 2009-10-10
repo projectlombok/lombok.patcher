@@ -85,12 +85,6 @@ public class WrapMethodCallScript extends MethodLevelPatchScript {
 		
 		@Override public void visitMethodInsn(int opcode, String owner, String name, String desc) {
 			super.visitMethodInsn(opcode, owner, name, desc);
-			if (name.equals("getMethods")) {
-				boolean rewrite = callToWrap.getClassSpec().equals(owner) &&
-			    callToWrap.getMethodName().equals(name) &&
-			    callToWrap.getMethodDescriptor().equals(desc);
-				System.out.printf("methodVisitInsn[%b]: %s %s%s........", rewrite, owner, name, desc);
-			}
 			if (callToWrap.getClassSpec().equals(owner) &&
 			    callToWrap.getMethodName().equals(name) &&
 			    callToWrap.getMethodDescriptor().equals(desc)) {

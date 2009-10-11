@@ -39,13 +39,14 @@ public class AddFieldScript extends PatchScript {
 	private final String targetClass;
 	private final String fieldName;
 	private final String fieldType;
+	private final Object value;
 	
 	/**
 	 * @param targetClass The class to add the field to, separated with dots (e.g. java.lang.String).
 	 * @param fieldName the name of the field to create.
 	 * @param typeSpec the type of the field, in JVM spec (e.g. [I for an int array).
 	 */
-	AddFieldScript(String targetClass, int accessFlags, String fieldName, String fieldType) {
+	AddFieldScript(String targetClass, int accessFlags, String fieldName, String fieldType, Object value) {
 		if (targetClass == null) throw new NullPointerException("targetClass");
 		if (fieldName == null) throw new NullPointerException("fieldName");
 		if (fieldType == null) throw new NullPointerException("typeSpec");
@@ -53,6 +54,7 @@ public class AddFieldScript extends PatchScript {
 		this.targetClass = targetClass;
 		this.fieldName = fieldName;
 		this.fieldType = fieldType;
+		this.value = value;
 	}
 	
 	@Override public byte[] patch(String className, byte[] byteCode) {
@@ -63,7 +65,7 @@ public class AddFieldScript extends PatchScript {
 	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, String classSpec) {
 		return new ClassAdapter(writer) {
 			@Override public void visitEnd() {
-				cv.visitField(accessFlags, fieldName, fieldType, null, null);
+				cv.visitField(accessFlags, fieldName, fieldType, null, value);
 				super.visitEnd();
 			}
 		};

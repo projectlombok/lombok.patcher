@@ -31,16 +31,16 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 import org.junit.Test;
-import org.objectweb.asm.Opcodes;
 
 public class TestAddFieldScript {
 	@Test
 	public void testAddFieldScript() throws Exception {
 		InputStream raw = TestAddFieldScript.class.getResourceAsStream("/lombok/patcher/scripts/TestAddFieldScriptEx1.class");
 		byte[] pretransform = readFromStream(raw);
-		byte[] posttransform = new AddFieldScript("lombok.patcher.scripts.TestAddFieldScriptEx1",
-				Opcodes.ACC_STATIC | Opcodes.ACC_PROTECTED, "$test", "I")
-				.patch("lombok/patcher/scripts/TestAddFieldScriptEx1", pretransform);
+		byte[] posttransform = ScriptBuilder.addField()
+		.targetClass("lombok.patcher.scripts.TestAddFieldScriptEx1")
+		.setProtected().setStatic().fieldName("$test").fieldType("I").build()
+		.patch("lombok/patcher/scripts/TestAddFieldScriptEx1", pretransform);
 		Class<?> ex1 = loadRaw("lombok.patcher.scripts.TestAddFieldScriptEx1", posttransform);
 		Method checkMethod = ex1.getMethod("check", String.class, int.class);
 		checkMethod.setAccessible(true);

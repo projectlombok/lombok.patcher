@@ -52,6 +52,7 @@ public class ScriptBuilder {
 		private String targetClass;
 		private String fieldName;
 		private String fieldType;
+		private Object value;
 		
 		private static final int NO_ACCESS_LEVELS = ~(Opcodes.ACC_PUBLIC | Opcodes.ACC_PRIVATE | Opcodes.ACC_PRIVATE);
 		
@@ -59,7 +60,11 @@ public class ScriptBuilder {
 			if (targetClass == null) throw new IllegalStateException("You have to set a targetClass");
 			if (fieldName == null) throw new IllegalStateException("You have to set a fieldName");
 			if (fieldType == null) throw new IllegalStateException("You have to set the new field's type by calling fieldType");
-			return new AddFieldScript(targetClass, accessFlags, fieldName, fieldType);
+			if (value != null) {
+				setStatic();
+				setFinal();
+			}
+			return new AddFieldScript(targetClass, accessFlags, fieldName, fieldType, value);
 		}
 		
 		/**
@@ -68,6 +73,11 @@ public class ScriptBuilder {
 		public AddFieldBuilder targetClass(String targetClass) {
 			checkTypeSyntaxDot(targetClass);
 			this.targetClass = targetClass;
+			return this;
+		}
+		
+		public AddFieldBuilder value(Object value) {
+			this.value = value;
 			return this;
 		}
 		
@@ -110,6 +120,11 @@ public class ScriptBuilder {
 		
 		public AddFieldBuilder setStatic() {
 			accessFlags |= Opcodes.ACC_STATIC;
+			return this;
+		}
+		
+		public AddFieldBuilder setFinal() {
+			accessFlags |= Opcodes.ACC_FINAL;
 			return this;
 		}
 		

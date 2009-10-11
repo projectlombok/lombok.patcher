@@ -26,26 +26,23 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarFile;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 
-import lombok.SneakyThrows;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodTarget;
 import lombok.patcher.ScriptManager;
 import lombok.patcher.StackRequest;
+import lombok.patcher.inject.LiveInjector;
 import lombok.patcher.scripts.ScriptBuilder;
 
 /**
@@ -74,7 +71,7 @@ public class EquinoxClassLoader extends ClassLoader {
 	private final Set<String> cantFind = new HashSet<String>();
 	
 	private EquinoxClassLoader() {
-		this.classpath.add(findOurClassPath());
+		this.classpath.add(new File(LiveInjector.findPathJar(EquinoxClassLoader.class)));
 		this.prefixes.add("lombok.patcher.");
 	}
 	
@@ -94,54 +91,25 @@ public class EquinoxClassLoader extends ClassLoader {
 		if (!subLoaders.contains(loader)) subLoaders.add(loader);
 	}
 	
-	public void registerScripts(ScriptManager manager) {
-		final String SELF_NAME = getClass().getName().replace(".", "/");
-		final String HOOK_DESC = "(Ljava/lang/ClassLoader;Ljava/lang/String;Z)";
-		
+	private static final String SELF_NAME = "lombok/patcher/equinox/EquinoxClassLoader";
+	private static final String HOOK_DESC = "(Ljava/lang/ClassLoader;Ljava/lang/String;Z)";
+	
+	public static void registerScripts(ScriptManager manager) {
 		manager.addScript(ScriptBuilder.exitEarly()
+				.target(new MethodTarget("org.eclipse.osgi.internal.baseadaptor.DefaultClassLoader", "loadClass",
+						"java.lang.Class", "java.lang.String", "boolean"))
 				.target(new MethodTarget("org.eclipse.osgi.framework.adapter.core.AbstractClassLoader", "loadClass",
 						"java.lang.Class", "java.lang.String", "boolean"))
 				.decisionMethod(new Hook(SELF_NAME, "overrideLoadDecide", HOOK_DESC + "Z"))
 				.valueMethod(new Hook(SELF_NAME, "overrideLoadResult", HOOK_DESC + "Ljava/lang/Class;"))
 				.request(StackRequest.THIS, StackRequest.PARAM1, StackRequest.PARAM2).build());
-		
-		manager.addScript(ScriptBuilder.exitEarly()
-				.target(new MethodTarget("org.eclipse.osgi.internal.baseadaptor.DefaultClassLoader", "loadClass",
-						"java.lang.Class", "java.lang.String", "boolean"))
-				.decisionMethod(new Hook(SELF_NAME, "overrideLoadDecide", HOOK_DESC + "Z"))
-				.valueMethod(new Hook(SELF_NAME, "overrideLoadResult", HOOK_DESC + "Ljava/lang/Class;"))
-				.request(StackRequest.THIS, StackRequest.PARAM1, StackRequest.PARAM2).build());
-	}
-	
-	@SneakyThrows({IOException.class, URISyntaxException.class})
-	private static File findOurClassPath() {
-		URI uri = EquinoxClassLoader.class.getResource("EquinoxClassLoader.class").toURI();
-		/* Jar-based? */ {
-			Pattern p = Pattern.compile("^jar:file:([^\\!]+)\\!.*\\.class$");
-			Matcher m = p.matcher(uri.toString());
-			if (m.matches()) {
-				String rawUri = m.group(1);
-				return new File(URLDecoder.decode(rawUri, Charset.defaultCharset().name()));
-			}
-		}
-		
-		/* File-based? */ {
-			String fullName = "/" + EquinoxClassLoader.class.getName().replace(".", "/") + ".class";
-			Pattern p = Pattern.compile("^file:(.*)" + Pattern.quote(fullName) + "$");
-			Matcher m = p.matcher(uri.toString());
-			if (m.matches()) {
-				String rawUri = m.group(1);
-				return new File(URLDecoder.decode(rawUri, Charset.defaultCharset().name()));
-			}
-		}
-		
-		/* Give up and default to current dir as a hail mary. */
-		return new File(".");
 	}
 	
 	private void logLoadError(Throwable t) {
 		t.printStackTrace();
 	}
+	
+	private final Map<String, WeakReference<Class<?>>> defineCache = new HashMap<String, WeakReference<Class<?>>>();
 	
 	/*
 	 * Load order:
@@ -153,6 +121,14 @@ public class EquinoxClassLoader extends ClassLoader {
 	 */
 	@Override protected synchronized Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
 		boolean controlLoad = false;
+		
+		WeakReference<Class<?>> ref = defineCache.get(name);
+		if (ref != null) {
+			Class<?> result = ref.get();
+			if (result != null) return result;
+			else defineCache.remove(name);
+		}
+		
 		for (String prefix : prefixes) {
 			if (name.startsWith(prefix)) {
 				controlLoad = true;
@@ -170,6 +146,7 @@ public class EquinoxClassLoader extends ClassLoader {
 					if (entry == null) continue;
 					byte[] classData = readStream(jf.getInputStream(entry));
 					c = defineClass(name, classData, 0, classData.length);
+					defineCache.put(name, new WeakReference<Class<?>>(c));
 					break;
 				} catch (IOException e) {
 					logLoadError(e);
@@ -180,6 +157,7 @@ public class EquinoxClassLoader extends ClassLoader {
 				try {
 					byte[] classData = readStream(new FileInputStream(target));
 					c = defineClass(name, classData, 0, classData.length);
+					defineCache.put(name, new WeakReference<Class<?>>(c));
 					break;
 				} catch (IOException e) {
 					logLoadError(e);
@@ -196,6 +174,7 @@ public class EquinoxClassLoader extends ClassLoader {
 			try {
 				byte[] classData = readStream(super.getResourceAsStream(name.replace(".", "/") + ".class"));
 				c = defineClass(name, classData, 0, classData.length);
+				defineCache.put(name, new WeakReference<Class<?>>(c));
 				if (resolve) resolveClass(c);
 				return c;
 			} catch (Exception ignore) {}
@@ -260,5 +239,4 @@ public class EquinoxClassLoader extends ClassLoader {
 		hostLoader.addSubLoader(original);
 		return hostLoader.loadClass(name, resolve);
 	}
-	
 }

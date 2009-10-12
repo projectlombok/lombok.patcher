@@ -25,6 +25,7 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -42,7 +43,13 @@ public class ScriptManager {
 	}
 	
 	public void registerTransformer(Instrumentation instrumentation) {
-		instrumentation.addTransformer(transformer, true);
+		try {
+			Method m = Instrumentation.class.getMethod("addTransformer", ClassFileTransformer.class, boolean.class);
+			m.invoke(instrumentation, transformer, true);
+		} catch (Throwable t) {
+			//We're on java 1.5, or something even crazier happened. This one works in 1.5 as well:
+			instrumentation.addTransformer(transformer);
+		}
 	}
 	
 	public void reloadClasses(Instrumentation instrumentation) {

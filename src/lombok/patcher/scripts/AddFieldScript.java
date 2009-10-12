@@ -30,6 +30,7 @@ import lombok.patcher.PatchScript;
 import org.objectweb.asm.ClassAdapter;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.FieldVisitor;
 
 /**
  * Adds a field to any class.
@@ -65,7 +66,8 @@ public class AddFieldScript extends PatchScript {
 	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, String classSpec) {
 		return new ClassAdapter(writer) {
 			@Override public void visitEnd() {
-				cv.visitField(accessFlags, fieldName, fieldType, null, value);
+				FieldVisitor fv = cv.visitField(accessFlags, fieldName, fieldType, null, value);
+				fv.visitEnd();
 				super.visitEnd();
 			}
 		};

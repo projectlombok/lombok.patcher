@@ -92,4 +92,15 @@
 		<jar basedir="build/pack" destfile="dist/lombok-patcher-${lombok.patcher.version}.jar" />
 		<copy file="dist/lombok-patcher-${lombok.patcher.version}.jar" tofile="dist/lombok-patcher.jar" />
 	</target>
+	
+	<taskdef name="scp" classname="org.apache.tools.ant.taskdefs.optional.ssh.Scp" classpathref="patcher.deps.path" />
+	<target name="publish" depends="dist" description="Creates distributable and uploads to projectlombok.org">
+		<available file="libertad-upload.key" property="libertad.key.available" />
+		<fail unless="libertad.key.available">You don't have the libertad-upload.key; you'll need it to get write access to the server.</fail>
+		<scp
+			localFile="dist/lombok-patcher.jar"
+			todir="lombokup@projectlombok.org:web/downloads"
+			keyfile="libertad-upload.key" passphrase=""
+			sftp="true" verbose="true" trust="true" />
+	</target>
 </project>

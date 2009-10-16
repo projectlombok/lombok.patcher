@@ -25,14 +25,15 @@ import lombok.Data;
 import lombok.NonNull;
 
 /**
- * Represents a method you write yourself; calls to it will be inserted into code-to-be-patched by a {@code PatchScript}.
+ * Represents a method you write yourself; calls to it will be inserted into
+ * code-to-be-patched by a {@code PatchScript}.
  * 
- * The {@code classSpec} property should be written in JVM style, such as {@code java/lang/String}.
+ * The {@code classSpec} property should be written in JVM style, such as
+ * {@code java/lang/String}.
  * 
  * @see http://java.sun.com/docs/books/jvms/second_edition/html/ClassFile.doc.html#1169
  */
-@Data
-public class Hook {
+@Data public class Hook {
 	private final @NonNull String classSpec;
 	private final @NonNull String methodName;
 	private final @NonNull String methodDescriptor;

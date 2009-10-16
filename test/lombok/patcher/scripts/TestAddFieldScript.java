@@ -48,7 +48,7 @@ public class TestAddFieldScript {
 		boolean pass = false;
 		try {
 			checkMethod.invoke(null, "$test2", Modifier.STATIC | Modifier.PROTECTED);
-		} catch ( InvocationTargetException expected ) {
+		} catch (InvocationTargetException expected) {
 			pass = expected.getCause() instanceof NoSuchFieldException;
 		}
 		

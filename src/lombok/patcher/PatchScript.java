@@ -186,7 +186,7 @@ public abstract class PatchScript {
 			for (Hook transplant : transplants) {
 				try {
 					transplantMethod(transplant, cv);
-				} catch ( IOException e ) {
+				} catch (IOException e) {
 					throw new IllegalArgumentException("Cannot read hook method's host class", e);
 				}
 			}

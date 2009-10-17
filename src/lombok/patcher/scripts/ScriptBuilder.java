@@ -143,13 +143,13 @@ public class ScriptBuilder {
 		private List<TargetMatcher> matchers = new ArrayList<TargetMatcher>();
 		private Hook decisionMethod, valueMethod;
 		private Set<StackRequest> requests = new HashSet<StackRequest>();
-		private boolean transplant;
+		private boolean transplant, insert;
 		
 		public ExitFromMethodEarlyScript build() {
 			if (matchers.isEmpty()) throw new IllegalStateException("You have to set a target method matcher");
 			if (decisionMethod == null) throw new IllegalStateException("You have to set a decision method");
 			
-			return new ExitFromMethodEarlyScript(matchers, decisionMethod, valueMethod, transplant, requests);
+			return new ExitFromMethodEarlyScript(matchers, decisionMethod, valueMethod, transplant, insert, requests);
 		}
 		
 		public ExitEarlyBuilder target(TargetMatcher matcher) {
@@ -169,6 +169,13 @@ public class ScriptBuilder {
 		
 		public ExitEarlyBuilder transplant() {
 			this.transplant = true;
+			this.insert = false;
+			return this;
+		}
+		
+		public ExitEarlyBuilder insert() {
+			this.transplant = false;
+			this.insert = true;
 			return this;
 		}
 		
@@ -188,14 +195,14 @@ public class ScriptBuilder {
 		private Hook replacementMethod;
 		private Hook methodToReplace;
 		private Set<StackRequest> extraRequests = new HashSet<StackRequest>();
-		private boolean transplant;
+		private boolean transplant, insert;
 		
 		public ReplaceMethodCallScript build() {
 			if (matchers.isEmpty()) throw new IllegalStateException("You have to set a target method matcher");
 			if (replacementMethod == null) throw new IllegalStateException("You have to set a replacement method");
 			if (methodToReplace == null) throw new IllegalStateException("You have to set a method call to replace");
 			
-			return new ReplaceMethodCallScript(matchers, methodToReplace, replacementMethod, transplant, extraRequests);
+			return new ReplaceMethodCallScript(matchers, methodToReplace, replacementMethod, transplant, insert, extraRequests);
 		}
 		
 		public ReplaceMethodCallBuilder target(TargetMatcher matcher) {
@@ -215,6 +222,13 @@ public class ScriptBuilder {
 		
 		public ReplaceMethodCallBuilder transplant() {
 			this.transplant = true;
+			this.insert = false;
+			return this;
+		}
+		
+		public ReplaceMethodCallBuilder insert() {
+			this.transplant = false;
+			this.insert = true;
 			return this;
 		}
 		
@@ -234,14 +248,14 @@ public class ScriptBuilder {
 		private Hook wrapMethod;
 		private Hook methodToWrap;
 		private Set<StackRequest> extraRequests = new HashSet<StackRequest>();
-		private boolean transplant;
+		private boolean transplant, insert;
 		
 		public WrapMethodCallScript build() {
 			if (matchers.isEmpty()) throw new IllegalStateException("You have to set a target method matcher");
 			if (wrapMethod == null) throw new IllegalStateException("You have to set method to wrap with");
 			if (methodToWrap == null) throw new IllegalStateException("You have to set a method call to wrap");
 			
-			return new WrapMethodCallScript(matchers, methodToWrap, wrapMethod, transplant, extraRequests);
+			return new WrapMethodCallScript(matchers, methodToWrap, wrapMethod, transplant, insert, extraRequests);
 		}
 		
 		public WrapMethodCallBuilder target(TargetMatcher matcher) {
@@ -261,6 +275,13 @@ public class ScriptBuilder {
 		
 		public WrapMethodCallBuilder transplant() {
 			this.transplant = true;
+			this.insert = false;
+			return this;
+		}
+		
+		public WrapMethodCallBuilder insert() {
+			this.transplant = false;
+			this.insert = true;
 			return this;
 		}
 		
@@ -279,13 +300,13 @@ public class ScriptBuilder {
 		private List<TargetMatcher> matchers = new ArrayList<TargetMatcher>();
 		private Hook wrapMethod;
 		private Set<StackRequest> requests = new HashSet<StackRequest>();
-		private boolean transplant;
+		private boolean transplant, insert;
 		
 		public WrapReturnValuesScript build() {
 			if (matchers.isEmpty()) throw new IllegalStateException("You have to set a target method matcher");
 			if (wrapMethod == null) throw new IllegalStateException("You have to set a method you'd like to wrap the return values with");
 			
-			return new WrapReturnValuesScript(matchers, wrapMethod, transplant, requests);
+			return new WrapReturnValuesScript(matchers, wrapMethod, transplant, insert, requests);
 		}
 		
 		public WrapReturnValueBuilder target(TargetMatcher matcher) {
@@ -300,6 +321,13 @@ public class ScriptBuilder {
 		
 		public WrapReturnValueBuilder transplant() {
 			this.transplant = true;
+			this.insert = false;
+			return this;
+		}
+		
+		public WrapReturnValueBuilder insert() {
+			this.transplant = false;
+			this.insert = true;
 			return this;
 		}
 		

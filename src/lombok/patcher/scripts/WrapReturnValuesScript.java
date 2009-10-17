@@ -45,7 +45,7 @@ public final class WrapReturnValuesScript extends MethodLevelPatchScript {
 	private final @NonNull Hook wrapper;
 	private final Set<StackRequest> requests;
 	private final boolean hijackReturnValue;
-	private final boolean transplant;
+	private final boolean transplant, insert;
 	
 	/**
 	 * @param targetMethod The target method to patch.
@@ -54,13 +54,15 @@ public final class WrapReturnValuesScript extends MethodLevelPatchScript {
 	 *   helper methods if you use this!
 	 * @param requests The kinds of parameters you want your hook method to receive.
 	 */
-	WrapReturnValuesScript(List<TargetMatcher> matchers, Hook wrapper, boolean transplant, Set<StackRequest> requests) {
+	WrapReturnValuesScript(List<TargetMatcher> matchers, Hook wrapper, boolean transplant, boolean insert, Set<StackRequest> requests) {
 		super(matchers);
 		if (wrapper == null) throw new NullPointerException("wrapper");
 		this.wrapper = wrapper;
 		this.hijackReturnValue = !wrapper.getMethodDescriptor().endsWith(")V");
 		this.requests = requests;
 		this.transplant = transplant;
+		this.insert = insert;
+		assert !(insert && transplant);
 	}
 	
 	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec) {
@@ -110,12 +112,9 @@ public final class WrapReturnValuesScript extends MethodLevelPatchScript {
 				logistics.generateLoadOpcodeForParam(param.getParamPos(), mv);
 			}
 			
-			if (transplant) {
-				super.visitMethodInsn(Opcodes.INVOKESTATIC, ownClassSpec, wrapper.getMethodName(), wrapper.getMethodDescriptor());
-			} else {
-				super.visitMethodInsn(Opcodes.INVOKESTATIC, wrapper.getClassSpec(), wrapper.getMethodName(),
-						wrapper.getMethodDescriptor());
-			}
+			if (insert) insertMethod(wrapper, mv);
+			else super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : wrapper.getClassSpec(), wrapper.getMethodName(),
+					wrapper.getMethodDescriptor());
 			super.visitInsn(opcode);
 		}
 	}

@@ -43,15 +43,17 @@ import org.objectweb.asm.Opcodes;
 public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 	private final @NonNull Hook decisionWrapper, valueWrapper;
 	private final Set<StackRequest> requests;
-	private final boolean transplant;
+	private final boolean transplant, insert;
 	
-	ExitFromMethodEarlyScript(List<TargetMatcher> matchers, Hook decisionWrapper, Hook valueWrapper, boolean transplant, Set<StackRequest> requests) {
+	ExitFromMethodEarlyScript(List<TargetMatcher> matchers, Hook decisionWrapper, Hook valueWrapper, boolean transplant, boolean insert, Set<StackRequest> requests) {
 		super(matchers);
 		if (decisionWrapper == null) throw new NullPointerException("decisionWrapper");
 		this.decisionWrapper = decisionWrapper;
 		this.valueWrapper = valueWrapper;
 		this.requests = requests;
 		this.transplant = transplant;
+		this.insert = insert;
+		assert !(insert && transplant);
 	}
 	
 	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec) {
@@ -88,7 +90,9 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 				if (!requests.contains(param)) continue;
 				logistics.generateLoadOpcodeForParam(param.getParamPos(), mv);
 			}
-			super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : decisionWrapper.getClassSpec(),
+			
+			if (insert) insertMethod(decisionWrapper, mv);
+			else super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : decisionWrapper.getClassSpec(),
 					decisionWrapper.getMethodName(), decisionWrapper.getMethodDescriptor());
 			
 			/* Inject:
@@ -111,7 +115,8 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 					if (!requests.contains(param)) continue;
 					logistics.generateLoadOpcodeForParam(param.getParamPos(), mv);
 				}
-				super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : valueWrapper.getClassSpec(),
+				if (insert) insertMethod(valueWrapper, mv);
+				else super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : valueWrapper.getClassSpec(),
 						valueWrapper.getMethodName(), valueWrapper.getMethodDescriptor());
 				logistics.generateReturnOpcode(mv);
 			}

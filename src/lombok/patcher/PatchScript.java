@@ -38,7 +38,10 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.Label;
+import org.objectweb.asm.MethodAdapter;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 
 /**
  * Represents a patch script. Contains a convenience method to run ASM on the class you want to transform.
@@ -119,26 +122,95 @@ public abstract class PatchScript {
 		public MethodVisitor createMethodVisitor(String methodName, String methodDescription, MethodVisitor parent, MethodLogistics logistics);
 	}
 	
-	protected static void transplantMethod(final Hook methodToTransplant, final ClassVisitor target) throws IOException {
-		InputStream wrapStream = PatchScript.class.getResourceAsStream("/" + methodToTransplant.getClassSpec() + ".class");
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		byte[] b = new byte[65536];
-		while (true) {
-			int r = wrapStream.read(b);
-			if (r == -1) break;
-			baos.write(b, 0, r);
+	private static byte[] readStream(String resourceName) {
+		try {
+			InputStream wrapStream = PatchScript.class.getResourceAsStream(resourceName);
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			byte[] b = new byte[65536];
+			while (true) {
+				int r = wrapStream.read(b);
+				if (r == -1) break;
+				baos.write(b, 0, r);
+			}
+			
+			return baos.toByteArray();
+		} catch (IOException e) {
+			throw new IllegalArgumentException("resource " + resourceName + " does not exist.", e);
 		}
+	}
+	
+	private static abstract class NoopClassVisitor implements ClassVisitor {
+		@Override public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {}
+		@Override public void visitAttribute(Attribute attr) {}
+		@Override public void visitEnd() {}
+		@Override public void visitOuterClass(String owner, String name, String desc) {}
+		@Override public void visitSource(String source, String debug) {}
+		@Override public void visitInnerClass(String name, String outerName, String innerName, int access) {}
+		@Override public AnnotationVisitor visitAnnotation(String desc, boolean visible) { return null; }
+		@Override public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) { return null; }
+		@Override public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+			return null;
+		}
+	}
+	
+	protected static void insertMethod(final Hook methodToInsert, final MethodVisitor target) {
+		byte[] classData = readStream("/" + methodToInsert.getClassSpec() + ".class");
 		
-		ClassReader reader = new ClassReader(baos.toByteArray());
-		ClassVisitor methodFinder = new ClassVisitor() {
-			@Override public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {}
-			@Override public void visitAttribute(Attribute attr) {}
-			@Override public void visitEnd() {}
-			@Override public void visitOuterClass(String owner, String name, String desc) {}
-			@Override public void visitSource(String source, String debug) {}
-			@Override public void visitInnerClass(String name, String outerName, String innerName, int access) {}
-			@Override public AnnotationVisitor visitAnnotation(String desc, boolean visible) { return null; }
-			@Override public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) { return null; }
+		ClassReader reader = new ClassReader(classData);
+		ClassVisitor methodFinder = new NoopClassVisitor() {
+			@Override public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+				if (name.equals(methodToInsert.getMethodName()) && desc.equals(methodToInsert.getMethodDescriptor())) {
+					return new MethodAdapter(target) {
+						@Override public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) {
+							return null;
+						}
+						
+						@Override public void visitMaxs(int maxStack, int maxLocals) {
+						}
+						
+						@Override public void visitLineNumber(int line, Label start) {
+						}
+						
+						@Override public void visitFrame(int type, int nLocal, Object[] local, int nStack, Object[] stack) {
+						}
+						
+						@Override public void visitEnd() {
+						}
+						
+						@Override public void visitCode() {
+						}
+						
+						@Override public void visitInsn(int opcode) {
+							if (opcode == Opcodes.RETURN || opcode == Opcodes.ARETURN || opcode == Opcodes.IRETURN
+									|| opcode == Opcodes.DRETURN || opcode == Opcodes.FRETURN || opcode == Opcodes.LRETURN)
+								/* do nothing */ return;
+							
+							super.visitInsn(opcode);
+						}
+						
+						@Override public void visitAttribute(Attribute attr) {
+						}
+						
+						@Override public AnnotationVisitor visitAnnotationDefault() {
+							return null;
+						}
+						
+						@Override public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+							return null;
+						}
+					};
+				}
+				return null;
+			}
+		};
+		reader.accept(methodFinder, 0);
+	}
+	
+	protected static void transplantMethod(final Hook methodToTransplant, final ClassVisitor target) throws IOException {
+		byte[] classData = readStream("/" + methodToTransplant.getClassSpec() + ".class");
+		
+		ClassReader reader = new ClassReader(classData);
+		ClassVisitor methodFinder = new NoopClassVisitor() {
 			@Override public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
 				if (name.equals(methodToTransplant.getMethodName()) && desc.equals(methodToTransplant.getMethodDescriptor())) {
 					return target.visitMethod(access, name, desc, signature, exceptions);

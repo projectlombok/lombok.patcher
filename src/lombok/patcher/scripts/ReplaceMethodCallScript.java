@@ -43,16 +43,18 @@ import org.objectweb.asm.Opcodes;
 public class ReplaceMethodCallScript extends MethodLevelPatchScript {
 	private final Hook wrapper;
 	private final Hook methodToReplace;
-	private final boolean transplant;
+	private final boolean transplant, insert;
 	private final Set<StackRequest> extraRequests;
 
-	ReplaceMethodCallScript(List<TargetMatcher> matchers, Hook callToReplace, Hook wrapper, boolean transplant, Set<StackRequest> extraRequests) {
+	ReplaceMethodCallScript(List<TargetMatcher> matchers, Hook callToReplace, Hook wrapper, boolean transplant, boolean insert, Set<StackRequest> extraRequests) {
 		super(matchers);
 		if (callToReplace == null) throw new NullPointerException("callToReplace");
 		if (wrapper == null) throw new NullPointerException("wrapper");
 		this.methodToReplace = callToReplace;
 		this.wrapper = wrapper;
 		this.transplant = transplant;
+		this.insert = insert;
+		assert !(insert && transplant);
 		this.extraRequests = extraRequests;
 	}
 	
@@ -87,7 +89,8 @@ public class ReplaceMethodCallScript extends MethodLevelPatchScript {
 					if (!extraRequests.contains(param)) continue;
 					logistics.generateLoadOpcodeForParam(param.getParamPos(), mv);
 				}
-				super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : wrapper.getClassSpec(),
+				if (insert) insertMethod(wrapper, mv);
+				else super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : wrapper.getClassSpec(),
 						wrapper.getMethodName(), wrapper.getMethodDescriptor());
 			} else {
 				super.visitMethodInsn(opcode, owner, name, desc);

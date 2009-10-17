@@ -46,11 +46,11 @@ import org.objectweb.asm.Opcodes;
 public class WrapMethodCallScript extends MethodLevelPatchScript {
 	private final Hook wrapper;
 	private final Hook callToWrap;
-	private final boolean transplant;
+	private final boolean transplant, insert;
 	private final boolean leaveReturnValueIntact;
 	private final Set<StackRequest> extraRequests;
 	
-	WrapMethodCallScript(List<TargetMatcher> matchers, Hook callToWrap, Hook wrapper, boolean transplant, Set<StackRequest> extraRequests) {
+	WrapMethodCallScript(List<TargetMatcher> matchers, Hook callToWrap, Hook wrapper, boolean transplant, boolean insert, Set<StackRequest> extraRequests) {
 		super(matchers);
 		if (callToWrap == null) throw new NullPointerException("callToWrap");
 		if (wrapper == null) throw new NullPointerException("wrapper");
@@ -58,6 +58,8 @@ public class WrapMethodCallScript extends MethodLevelPatchScript {
 		this.callToWrap = callToWrap;
 		this.wrapper = wrapper;
 		this.transplant = transplant;
+		this.insert = insert;
+		assert !(insert && transplant);
 		this.extraRequests = extraRequests;
 	}
 	
@@ -97,7 +99,8 @@ public class WrapMethodCallScript extends MethodLevelPatchScript {
 					if (!extraRequests.contains(param)) continue;
 					logistics.generateLoadOpcodeForParam(param.getParamPos(), mv);
 				}
-				super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : wrapper.getClassSpec(),
+				if (insert) insertMethod(wrapper, mv);
+				else super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : wrapper.getClassSpec(),
 						wrapper.getMethodName(), wrapper.getMethodDescriptor());
 			}
 		}

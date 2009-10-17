@@ -31,7 +31,7 @@ import lombok.NonNull;
  * The {@code classSpec} property should be written in JVM style, such as
  * {@code java/lang/String}.
  * 
- * @see http://java.sun.com/docs/books/jvms/second_edition/html/ClassFile.doc.html#1169
+ * @see <a href="http://java.sun.com/docs/books/jvms/second_edition/html/ClassFile.doc.html#1169">JVM Spec on method names and descriptors</a>
  */
 @Data public class Hook {
 	private final @NonNull String classSpec;

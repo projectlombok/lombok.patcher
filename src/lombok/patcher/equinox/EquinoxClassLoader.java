@@ -177,7 +177,10 @@ public class EquinoxClassLoader extends ClassLoader {
 				defineCache.put(name, new WeakReference<Class<?>>(c));
 				if (resolve) resolveClass(c);
 				return c;
-			} catch (Exception ignore) {}
+			} catch (Exception ignore) {} catch (UnsupportedClassVersionError e) {
+				System.out.println("BAD CLASS VERSION TRYING TO LOAD: " + name);
+				throw e;
+			}
 		} else {
 			try {
 				return super.loadClass(name, resolve);

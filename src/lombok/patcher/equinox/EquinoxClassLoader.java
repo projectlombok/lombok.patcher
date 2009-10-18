@@ -79,8 +79,8 @@ public class EquinoxClassLoader extends ClassLoader {
 		return hostLoader;
 	}
 	
-	public void addPrefix(String... prefixes) {
-		this.prefixes.addAll(Arrays.asList(prefixes));
+	public void addPrefix(String... additionalPrefixes) {
+		this.prefixes.addAll(Arrays.asList(additionalPrefixes));
 	}
 	
 	public void addClasspath(String file) {
@@ -126,7 +126,7 @@ public class EquinoxClassLoader extends ClassLoader {
 		if (ref != null) {
 			Class<?> result = ref.get();
 			if (result != null) return result;
-			else defineCache.remove(name);
+			defineCache.remove(name);
 		}
 		
 		for (String prefix : prefixes) {

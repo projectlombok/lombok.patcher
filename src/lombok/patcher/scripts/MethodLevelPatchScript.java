@@ -38,9 +38,9 @@ public abstract class MethodLevelPatchScript extends PatchScript {
 	
 	public MethodLevelPatchScript(Collection<TargetMatcher> matchers) {
 		this.matchers = matchers;
-		Set<String> affectedClasses = new HashSet<String>();
-		for (TargetMatcher t : matchers) affectedClasses.addAll(t.getAffectedClasses());
-		this.affectedClasses = Collections.unmodifiableSet(affectedClasses);
+		Set<String> affected = new HashSet<String>();
+		for (TargetMatcher t : matchers) affected.addAll(t.getAffectedClasses());
+		this.affectedClasses = Collections.unmodifiableSet(affected);
 	}
 	
 	@Override public Collection<String> getClassesToReload() {

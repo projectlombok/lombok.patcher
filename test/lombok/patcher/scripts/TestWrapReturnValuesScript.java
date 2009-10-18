@@ -71,9 +71,10 @@ public class TestWrapReturnValuesScript {
 	}
 }
 
+@SuppressWarnings("all")
 class TestWrapReturnValuesScriptEx1 {
 	public int foo(int x, String[] y) {
 		if (x < 10) return 10;
-		else return 80;
+		return 80;
 	}
 }

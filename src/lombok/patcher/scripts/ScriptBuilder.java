@@ -70,13 +70,13 @@ public class ScriptBuilder {
 		/**
 		 * @param targetClass The class to add the field to, separated with dots (e.g. java.lang.String).
 		 */
-		public AddFieldBuilder targetClass(String targetClass) {
+		public AddFieldBuilder targetClass(@SuppressWarnings("hiding") String targetClass) {
 			checkTypeSyntaxDot(targetClass);
 			this.targetClass = targetClass;
 			return this;
 		}
 		
-		public AddFieldBuilder value(Object value) {
+		public AddFieldBuilder value(@SuppressWarnings("hiding") Object value) {
 			this.value = value;
 			return this;
 		}
@@ -84,7 +84,7 @@ public class ScriptBuilder {
 		/**
 		 * @param fieldName the name of the field to create.
 		 */
-		public AddFieldBuilder fieldName(String fieldName) {
+		public AddFieldBuilder fieldName(@SuppressWarnings("hiding") String fieldName) {
 			this.fieldName = fieldName;
 			return this;
 		}
@@ -92,7 +92,7 @@ public class ScriptBuilder {
 		/**
 		 * @param fieldType the type of the field, in JVM spec (e.g. [I for an int array).
 		 */
-		public AddFieldBuilder fieldType(String fieldType) {
+		public AddFieldBuilder fieldType(@SuppressWarnings("hiding") String fieldType) {
 			checkTypeSyntaxSlash(fieldType);
 			this.fieldType = fieldType;
 			return this;
@@ -179,7 +179,7 @@ public class ScriptBuilder {
 			return this;
 		}
 		
-		public ExitEarlyBuilder request(StackRequest... requests) {
+		public ExitEarlyBuilder request(@SuppressWarnings("hiding") StackRequest... requests) {
 			for (StackRequest r : requests) {
 				if (r == StackRequest.RETURN_VALUE) throw new IllegalArgumentException(
 						"You cannot ask for the tentative return value in ExitFromMethodEarlyScript.");
@@ -331,9 +331,8 @@ public class ScriptBuilder {
 			return this;
 		}
 		
-		public WrapReturnValueBuilder request(StackRequest... requests) {
+		public WrapReturnValueBuilder request(@SuppressWarnings("hiding") StackRequest... requests) {
 			for (StackRequest r : requests) this.requests.add(r);
-			
 			return this;
 		}
 	}
@@ -356,12 +355,12 @@ public class ScriptBuilder {
 			return this;
 		}
 		
-		public SetSymbolDuringMethodCallBuilder callToWrap(Hook callToWrap) {
+		public SetSymbolDuringMethodCallBuilder callToWrap(@SuppressWarnings("hiding") Hook callToWrap) {
 			this.callToWrap = callToWrap;
 			return this;
 		}
 		
-		public SetSymbolDuringMethodCallBuilder symbol(String symbol) {
+		public SetSymbolDuringMethodCallBuilder symbol(@SuppressWarnings("hiding") String symbol) {
 			this.symbol = symbol;
 			return this;
 		}

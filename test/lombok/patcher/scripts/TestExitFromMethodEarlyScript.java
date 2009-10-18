@@ -96,9 +96,8 @@ public class TestExitFromMethodEarlyScript {
 class TestExitFromMethodEarlyScriptEx1 {
 	public boolean marker = false;
 	public void voidReturnMethod(int a, String b) {
-		if (a < 10)
-			fail("I shouldn't run");
-		else marker = true;
+		if (a < 10) fail("I shouldn't run");
+		marker = true;
 	}
 	
 	public double returnsSomething() {

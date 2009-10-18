@@ -131,7 +131,7 @@ public final class MethodTarget implements TargetMatcher {
 	 * @return {@code true} if the class spec seems to match this MethodTarget's class. So, if this target is set to class
 	 *         {@code java.lang.String} and you supply as classSpec: {@code java/lang/String}, this method returns {@code true}.
 	 */
-	public boolean classMatches(String classSpec) {
+	public boolean classMatches(@SuppressWarnings("hiding") String classSpec) {
 		return typeMatches(classSpec, this.classSpec);
 	}
 	
@@ -147,7 +147,7 @@ public final class MethodTarget implements TargetMatcher {
 	 * @param methodName The name of the method.
 	 * @param descriptor A Method descriptor, ASM-style (e.g. {@code (II)V}.
 	 */
-	public boolean matches(String classSpec, String methodName, String descriptor) {
+	public boolean matches(@SuppressWarnings("hiding") String classSpec, @SuppressWarnings("hiding") String methodName, String descriptor) {
 		if (!methodName.equals(this.methodName)) return false;
 		
 		if (!classMatches(classSpec)) return false;

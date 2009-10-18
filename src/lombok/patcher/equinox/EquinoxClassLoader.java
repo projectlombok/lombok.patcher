@@ -226,6 +226,13 @@ public class EquinoxClassLoader extends ClassLoader {
 		}
 	}
 	
+	/**
+	 * Method used to patch equinox classloader.
+	 * 
+	 * @param original Parameter must be there for patching.
+	 * @param name Parameter must be there for patching.
+	 * @param resolve Parameter must be there for patching.
+	 */
 	public static boolean overrideLoadDecide(ClassLoader original, String name, boolean resolve) {
 		if (hostLoader.cantFind.contains(name)) return false;
 		for (String prefix : hostLoader.prefixes) {

@@ -76,6 +76,7 @@ public class TestExitFromMethodEarlyScript {
 		assertEquals("returnsSomething", Double.valueOf(Double.NaN), retMethod.invoke(instance));
 	}
 	
+	@SuppressWarnings("all")
 	public static class TestExitFromMethodEarlyScriptEx2 {
 		public static boolean hook1(Object thisRef, int param1, String param2) {
 			assertEquals("typeOf thisRef", "lombok.patcher.scripts.TestExitFromMethodEarlyScriptEx1", thisRef.getClass().getName());
@@ -93,6 +94,7 @@ public class TestExitFromMethodEarlyScript {
 	}
 }
 
+@SuppressWarnings("all")
 class TestExitFromMethodEarlyScriptEx1 {
 	public boolean marker = false;
 	public void voidReturnMethod(int a, String b) {

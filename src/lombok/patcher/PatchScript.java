@@ -101,6 +101,9 @@ public abstract class PatchScript {
 	
 	/**
 	 * You need to override this method if you want to call {@see #runASM(byte[])}.
+	 * 
+	 * @param writer The parent writer.
+	 * @param classSpec The name of the class you need to make a visitor for.
 	 */
 	protected ClassVisitor createClassVisitor(ClassWriter writer, String classSpec) {
 		throw new IllegalStateException("If you're going to call runASM, then you need to implement createClassVisitor");
@@ -166,7 +169,7 @@ public abstract class PatchScript {
 		reader.accept(methodFinder, 0);
 	}
 	
-	protected static void transplantMethod(final Hook methodToTransplant, final ClassVisitor target) throws IOException {
+	protected static void transplantMethod(final Hook methodToTransplant, final ClassVisitor target) {
 		byte[] classData = readStream("/" + methodToTransplant.getClassSpec() + ".class");
 		
 		ClassReader reader = new ClassReader(classData);
@@ -241,11 +244,7 @@ public abstract class PatchScript {
 		
 		@Override public void visitEnd() {
 			for (Hook transplant : transplants) {
-				try {
-					transplantMethod(transplant, cv);
-				} catch (IOException e) {
-					throw new IllegalArgumentException("Cannot read hook method's host class", e);
-				}
+				transplantMethod(transplant, cv);
 			}
 		}
 		

@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import lombok.Cleanup;
 import lombok.Getter;
 
 import org.objectweb.asm.AnnotationVisitor;
@@ -42,6 +43,7 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodAdapter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.commons.JSRInlinerAdapter;
 
 /**
  * Represents a patch script. Contains a convenience method to run ASM on the class you want to transform.
@@ -76,25 +78,48 @@ public abstract class PatchScript {
 	 */
 	public abstract byte[] patch(String className, byte[] byteCode);
 	
+	private static class FixedClassWriter extends ClassWriter {
+		FixedClassWriter(ClassReader classReader, int flags) {
+			super(classReader, flags);
+			
+		}
+		
+		@Override protected String getCommonSuperClass(String type1, String type2) {
+			//By default, ASM will attempt to live-load the class types, which will fail if meddling with classes in an
+			//environment with custom classloaders, such as Equinox. It's just an optimization; returning Object is always legal.
+			try {
+				return super.getCommonSuperClass(type1, type2);
+			} catch (Exception e) {
+				return "java/lang/Object";
+			}
+		}
+	}
+	
 	/**
 	 * Runs ASM on the provider byteCode, chaining a reader to a writer and using the {@code ClassVisitor} you yourself provide
 	 * via the {@see #createClassVisitor(ClassWriter)} method as the filter.
 	 */
 	protected byte[] runASM(byte[] byteCode, boolean computeFrames) {
+		byte[] fixedByteCode = fixJSRInlining(byteCode);
+		
+		ClassReader reader = new ClassReader(fixedByteCode);
+		ClassWriter writer = new FixedClassWriter(reader, computeFrames ? ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES : 0);
+		
+		ClassVisitor visitor = createClassVisitor(writer, reader.getClassName());
+		reader.accept(visitor, 0);
+		return writer.toByteArray();
+	}
+	
+	protected byte[] fixJSRInlining(byte[] byteCode) {
 		ClassReader reader = new ClassReader(byteCode);
-		ClassWriter writer = new ClassWriter(reader, computeFrames ? ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES : 0) {
-			@Override protected String getCommonSuperClass(String type1, String type2) {
-				//By default, ASM will attempt to live-load the class types, which will fail if meddling with classes in an
-				//environment with custom classloaders, such as Equinox. It's just an optimization; returning Object is always legal.
-				try {
-					return super.getCommonSuperClass(type1, type2);
-				} catch (Exception e) {
-					return "java/lang/Object";
-				}
+		ClassWriter writer = new FixedClassWriter(reader, 0);
+		
+		ClassVisitor visitor = new ClassAdapter(writer) {
+			@Override public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+				return new JSRInlinerAdapter(super.visitMethod(access, name, desc, signature, exceptions), access, name, desc, signature, exceptions);
 			}
 		};
 		
-		ClassVisitor visitor = createClassVisitor(writer, reader.getClassName());
 		reader.accept(visitor, 0);
 		return writer.toByteArray();
 	}
@@ -127,7 +152,7 @@ public abstract class PatchScript {
 	
 	private static byte[] readStream(String resourceName) {
 		try {
-			InputStream wrapStream = PatchScript.class.getResourceAsStream(resourceName);
+			@Cleanup InputStream wrapStream = PatchScript.class.getResourceAsStream(resourceName);
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			byte[] b = new byte[65536];
 			while (true) {

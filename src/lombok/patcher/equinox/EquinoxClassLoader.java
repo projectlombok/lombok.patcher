@@ -63,24 +63,23 @@ import lombok.patcher.scripts.ScriptBuilder;
  * </ul>
  */
 public class EquinoxClassLoader extends ClassLoader {
-	private static EquinoxClassLoader hostLoader = new EquinoxClassLoader();
+	private static Map<ClassLoader, EquinoxClassLoader> hostLoaders = new HashMap<ClassLoader, EquinoxClassLoader>();
 	private static Method resolveMethod;	//cache
-	private final List<String> prefixes = new ArrayList<String>();
+	private static final List<String> prefixes = new ArrayList<String>();
 	private final List<File> classpath = new ArrayList<File>();
 	private final List<ClassLoader> subLoaders = new ArrayList<ClassLoader>();
 	private final Set<String> cantFind = new HashSet<String>();
 	
+	static {
+		prefixes.add("lombok.patcher.");
+	}
+	
 	private EquinoxClassLoader() {
 		this.classpath.add(new File(LiveInjector.findPathJar(EquinoxClassLoader.class)));
-		this.prefixes.add("lombok.patcher.");
 	}
 	
-	public static EquinoxClassLoader getInstance() {
-		return hostLoader;
-	}
-	
-	public void addPrefix(String... additionalPrefixes) {
-		this.prefixes.addAll(Arrays.asList(additionalPrefixes));
+	public static void addPrefix(String... additionalPrefixes) {
+		prefixes.addAll(Arrays.asList(additionalPrefixes));
 	}
 	
 	public void addClasspath(String file) {
@@ -177,8 +176,9 @@ public class EquinoxClassLoader extends ClassLoader {
 				defineCache.put(name, new WeakReference<Class<?>>(c));
 				if (resolve) resolveClass(c);
 				return c;
-			} catch (Exception ignore) {} catch (UnsupportedClassVersionError e) {
-				System.out.println("BAD CLASS VERSION TRYING TO LOAD: " + name);
+			} catch (Exception ignore) {
+			} catch (UnsupportedClassVersionError e) {
+				System.err.println("BAD CLASS VERSION TRYING TO LOAD: " + name);
 				throw e;
 			}
 		} else {
@@ -229,6 +229,17 @@ public class EquinoxClassLoader extends ClassLoader {
 		}
 	}
 	
+	private static EquinoxClassLoader getHostLoader(ClassLoader original) {
+		synchronized (hostLoaders) {
+			EquinoxClassLoader ecl = hostLoaders.get(original);
+			if (ecl != null) return ecl;
+			ecl = new EquinoxClassLoader();
+			ecl.addSubLoader(original);
+			hostLoaders.put(original, ecl);
+			return ecl;
+		}
+	}
+	
 	/**
 	 * Method used to patch equinox classloader.
 	 * 
@@ -237,8 +248,9 @@ public class EquinoxClassLoader extends ClassLoader {
 	 * @param resolve Parameter must be there for patching.
 	 */
 	public static boolean overrideLoadDecide(ClassLoader original, String name, boolean resolve) {
+		EquinoxClassLoader hostLoader = getHostLoader(original);
 		if (hostLoader.cantFind.contains(name)) return false;
-		for (String prefix : hostLoader.prefixes) {
+		for (String prefix : prefixes) {
 			if (name.startsWith(prefix)) return true;
 		}
 		
@@ -246,6 +258,7 @@ public class EquinoxClassLoader extends ClassLoader {
 	}
 	
 	public static Class<?> overrideLoadResult(ClassLoader original, String name, boolean resolve) throws ClassNotFoundException {
+		EquinoxClassLoader hostLoader = getHostLoader(original);
 		hostLoader.addSubLoader(original);
 		return hostLoader.loadClass(name, resolve);
 	}

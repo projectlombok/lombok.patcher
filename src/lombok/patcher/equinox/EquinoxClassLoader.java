@@ -64,22 +64,36 @@ import lombok.patcher.scripts.ScriptBuilder;
  */
 public class EquinoxClassLoader extends ClassLoader {
 	private static Map<ClassLoader, EquinoxClassLoader> hostLoaders = new HashMap<ClassLoader, EquinoxClassLoader>();
+	private static EquinoxClassLoader coreLoader = new EquinoxClassLoader();
 	private static Method resolveMethod;	//cache
 	private static final List<String> prefixes = new ArrayList<String>();
+	private static final List<String> corePrefixes = new ArrayList<String>();
 	private final List<File> classpath = new ArrayList<File>();
 	private final List<ClassLoader> subLoaders = new ArrayList<ClassLoader>();
 	private final Set<String> cantFind = new HashSet<String>();
 	
 	static {
-		prefixes.add("lombok.patcher.");
+		corePrefixes.add("lombok.patcher.");
 	}
 	
 	private EquinoxClassLoader() {
 		this.classpath.add(new File(LiveInjector.findPathJar(EquinoxClassLoader.class)));
 	}
 	
+	/**
+	 * Any classes whose name starts with a prefix will be searched in the patch classpath.
+	 */
 	public static void addPrefix(String... additionalPrefixes) {
 		prefixes.addAll(Arrays.asList(additionalPrefixes));
+	}
+	
+	/**
+	 * Any classes whose name starts with a prefix will be searched in the patch classpath, *AND* will always be loaded by the core loader.
+	 * Any classes here can NOT interface with the code you are patching, but, there will be no multiple versions of any Classes that start
+	 * with a core prefix, even if the target project is using classloaders for dynamic modularization.
+	 */
+	public static void addCorePrefix(String... additionalPrefixes) {
+		corePrefixes.addAll(Arrays.asList(additionalPrefixes));
 	}
 	
 	public void addClasspath(String file) {
@@ -126,6 +140,16 @@ public class EquinoxClassLoader extends ClassLoader {
 			Class<?> result = ref.get();
 			if (result != null) return result;
 			defineCache.remove(name);
+		}
+		
+		for (String corePrefix : corePrefixes) {
+			if (name.startsWith(corePrefix)) {
+				if (this != coreLoader) {
+					return coreLoader.loadClass(name, resolve);
+				}
+				controlLoad = true;
+				break;
+			}
 		}
 		
 		for (String prefix : prefixes) {

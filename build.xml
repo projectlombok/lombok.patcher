@@ -58,7 +58,7 @@
 		</copy>
 	</target>
 	
-	<target name="compileTests" depends="compile" description="Compiles the unit tests" unless="pointless">
+	<target name="compileTests" depends="compile" description="Compiles the unit tests" unless="skipTests">
 		<mkdir dir="build/tests" />
 		<javac srcdir="test" debug="on" destdir="build/tests" target="1.5">
 			<classpath refid="patcher.deps.path" />
@@ -70,7 +70,13 @@
 		<property name="tests.quiet" value="true" />
 	</target>
 	
-	<target name="-test" depends="compileTests" unless="pointless">
+	<target name="-test-setup">
+		<condition property="skipTests">
+			<isset property="pointless" />
+		</condition>
+	</target>
+	
+	<target name="-test" depends="-test-setup, compileTests" unless="skipTests">
 		<junit haltonfailure="yes" fork="on">
 			<formatter type="plain" usefile="false" unless="tests.quiet" />
 			<classpath refid="patcher.deps.path" />

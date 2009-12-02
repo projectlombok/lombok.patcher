@@ -38,7 +38,6 @@ import org.objectweb.asm.Opcodes;
 
 /**
  * Will find every 'return' instruction in the target method and will insert right before it a call to the wrapper.
- * The wrapper will be given the instance (null if the target is static), and the value that would be returned.
  */
 @ToString
 public final class WrapReturnValuesScript extends MethodLevelPatchScript {

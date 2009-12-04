@@ -44,22 +44,26 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 	private final @NonNull Hook decisionWrapper, valueWrapper;
 	private final Set<StackRequest> requests;
 	private final boolean transplant, insert;
+	private final boolean insertCallOnly;
 	
 	ExitFromMethodEarlyScript(List<TargetMatcher> matchers, Hook decisionWrapper, Hook valueWrapper, boolean transplant, boolean insert, Set<StackRequest> requests) {
 		super(matchers);
-		if (decisionWrapper == null) throw new NullPointerException("decisionWrapper");
 		this.decisionWrapper = decisionWrapper;
 		this.valueWrapper = valueWrapper;
 		this.requests = requests;
 		this.transplant = transplant;
 		this.insert = insert;
+		this.insertCallOnly = decisionWrapper != null && decisionWrapper.getMethodDescriptor().endsWith(")V");
+		if (!this.insertCallOnly && decisionWrapper != null && !decisionWrapper.getMethodDescriptor().endsWith(")Z")) {
+			throw new IllegalArgumentException("The decisionWrapper method must either return 'boolean' or return 'void'.");
+		}
 		assert !(insert && transplant);
 	}
 	
 	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec) {
 		MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
 			@Override public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
-				if (logistics.getReturnOpcode() != Opcodes.RETURN && valueWrapper == null) {
+				if (valueWrapper == null && !insertCallOnly && logistics.getReturnOpcode() != Opcodes.RETURN) {
 					throw new IllegalStateException("method " + name + desc + " must return something, but " +
 							"you did not provide a value hook method.");
 				}
@@ -85,6 +89,17 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 		}
 		
 		@Override public void visitCode() {
+			if (decisionWrapper == null) {
+				//Always return early.
+				if (logistics.getReturnOpcode() == Opcodes.RETURN) {
+					mv.visitInsn(Opcodes.RETURN);
+					return;
+				}
+				
+				insertValueWrapperCall();
+				return;
+			}
+			
 			if (requests.contains(StackRequest.THIS)) logistics.generateLoadOpcodeForThis(mv);
 			for (StackRequest param : StackRequest.PARAMS_IN_ORDER) {
 				if (!requests.contains(param)) continue;
@@ -94,6 +109,11 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 			if (insert) insertMethod(decisionWrapper, mv);
 			else super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : decisionWrapper.getClassSpec(),
 					decisionWrapper.getMethodName(), decisionWrapper.getMethodDescriptor());
+			
+			if (insertCallOnly) {
+				super.visitCode();
+				return;
+			}
 			
 			/* Inject:
 			 * if ([result of decision hook]) {
@@ -125,14 +145,16 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 			super.visitCode();
 		}
 		
-		@Override public void visitInsn(int opcode) {
-			if (opcode != logistics.getReturnOpcode()) {
-				super.visitInsn(opcode);
-				return;
+		private void insertValueWrapperCall() {
+			if (requests.contains(StackRequest.THIS)) logistics.generateLoadOpcodeForThis(mv);
+			for (StackRequest param : StackRequest.PARAMS_IN_ORDER) {
+				if (!requests.contains(param)) continue;
+				logistics.generateLoadOpcodeForParam(param.getParamPos(), mv);
 			}
-			
-			
-			super.visitInsn(opcode);
+			if (insert) insertMethod(valueWrapper, mv);
+			else super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : valueWrapper.getClassSpec(),
+					valueWrapper.getMethodName(), valueWrapper.getMethodDescriptor());
+			logistics.generateReturnOpcode(mv);
 		}
 	}
 }

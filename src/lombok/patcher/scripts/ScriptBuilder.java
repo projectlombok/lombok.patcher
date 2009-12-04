@@ -147,7 +147,6 @@ public class ScriptBuilder {
 		
 		public ExitFromMethodEarlyScript build() {
 			if (matchers.isEmpty()) throw new IllegalStateException("You have to set a target method matcher");
-			if (decisionMethod == null) throw new IllegalStateException("You have to set a decision method");
 			
 			return new ExitFromMethodEarlyScript(matchers, decisionMethod, valueMethod, transplant, insert, requests);
 		}

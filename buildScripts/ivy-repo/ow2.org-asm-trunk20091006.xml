@@ -5,8 +5,10 @@
 	</info>
 	<configurations>
 		<conf name="master" />
+		<conf name="sources" />
 	</configurations>
 	<publications>
 		<artifact conf="master" url="http://projectlombok.org/ivyrepo/tools/org.ow2-asm-trunk-20091006.jar" />
+		<artifact type="zip" name="asm-src" conf="sources" url="http://projectlombok.org/ivyrepo/tools/org.ow2-asm-trunk-20091006-src.zip" />
 	</publications>
 </ivy-module>

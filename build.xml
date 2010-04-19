@@ -139,7 +139,7 @@
 		<ivy:configure file="buildScripts/ivysettings.xml" />
 	</target>
 	
-	<target name="deps" depends="ensureBuildDeps, ensureRuntimeDeps, ensureTestDeps" />
+	<target name="deps" depends="ensureBuildDeps, ensureRuntimeDeps, ensureTestDeps" description="Downloads / updates all dependencies. No need to call this manually, though useful to run before opening this directory as an eclipse project." />
 	
 	<target name="ensureBuildDeps" depends="config-ivy">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="build" />
@@ -154,6 +154,11 @@
 	<target name="ensureTestDeps" depends="config-ivy">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="test" />
 		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
+	</target>
+	
+	<target name="contrib" depends="config-ivy" description="Downloads and builds useful but optional extras, such as sources to used libraries.">
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="contrib" />
+		<ivy:retrieve pattern="contrib/[artifact].[ext]" />
 	</target>
 	
 	<target name="publish" depends="dist" description="Creates distributable and uploads to projectlombok.org">

@@ -126,8 +126,8 @@
 	
 	<target name="dist" depends="-pointlessCheck, -test.quiet, -test, version, compile" unless="pointless" description="Creates the distributable">
 		<mkdir dir="dist" />
-		<jar basedir="build/pack" destfile="dist/lombok-patcher-${lombok.patcher.version}.jar" />
-		<copy file="dist/lombok-patcher-${lombok.patcher.version}.jar" tofile="dist/lombok-patcher.jar" />
+		<jar basedir="build/pack" destfile="dist/lombok.patcher-${lombok.patcher.version}.jar" />
+		<copy file="dist/lombok.patcher-${lombok.patcher.version}.jar" tofile="dist/lombok.patcher.jar" />
 	</target>
 	
 	<target name="ensure-ivy">
@@ -163,12 +163,18 @@
 	
 	<target name="publish" depends="dist" description="Creates distributable and uploads to projectlombok.org">
 		<taskdef name="scp" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.Scp" classpathref="build.path" />
+		<taskdef name="sshexec" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.SSHExec" classpathref="build.path" />
 		<available file="libertad-upload.key" property="libertad.key.available" />
 		<fail unless="libertad.key.available">You don't have the libertad-upload.key; you'll need it to get write access to the server.</fail>
 		<scp
-			localFile="dist/lombok-patcher.jar"
+			localFile="dist/lombok.patcher-${lombok.patcher.version}.jar"
 			todir="lombokup@projectlombok.org:web/downloads"
 			keyfile="libertad-upload.key" passphrase=""
 			sftp="true" verbose="true" trust="true" />
+			<sshexec
+				host="projectlombok.org"
+				username="lombokup"
+				keyfile="libertad-upload.key" passphrase=""
+				trust="true" command="./deployLombokPatcher '${lombok.patcher.version}'" />
 	</target>
 </project>

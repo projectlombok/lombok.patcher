@@ -1,0 +1,12 @@
+<ivy-module version="2.0">
+	<info organisation="ow2.org" module="asm" revision="trunk20091006" publication="20100225011200">
+		<license name="Custom Open Source, INRIA, France Telecom" url="http://asm.ow2.org/license.html" />
+		<description homepage="http://asm.ow2.org/" />
+	</info>
+	<configurations>
+		<conf name="master" />
+	</configurations>
+	<publications>
+		<artifact conf="master" url="http://projectlombok.org/ivyrepo/tools/org.ow2-asm-trunk-20091006.jar" />
+	</publications>
+</ivy-module>

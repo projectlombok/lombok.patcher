@@ -1,24 +1,56 @@
-<project name="lombok.patcher" default="dist">
-	<path id="patcher.deps.path">
-		<fileset dir="deps">
-			<include name="**/*.jar" />
+<!--
+  Copyright © 2009, 2010 Reinier Zwitserloot and Roel Spilker.
+  
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+  
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+  
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+-->
+<project name="lombok.patcher" default="dist" xmlns:ivy="antlib:org.apache.ivy.ant">
+	<path id="build.path">
+		<fileset dir="lib/build">
+			<include name="*.jar" />
 		</fileset>
 	</path>
-	<path id="patcher.libs.path">
-		<fileset dir="lib">
-			<include name="**/*.jar" />
+	
+	<path id="runtime.path">
+		<fileset dir="lib/runtime">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+	
+	<path id="test.path">
+		<fileset dir="lib/test">
+			<include name="*.jar" />
 		</fileset>
 	</path>
 	
 	<target name="-pointlessCheck">
 		<uptodate property="pointless" targetfile="dist/lombok-patcher.jar">
-			<srcfiles dir="." includes="src/**/*.java test/**/*.java lib/**" />
+			<srcfiles dir="." includes="src/**/*.java test/**/*.java lib/build/** lib/runtime/**" />
 		</uptodate>
 	</target>
 	
 	<target name="clean" description="Deletes build artefacts">
 		<delete dir="build" quiet="true" />
+	</target>
+	
+	<target name="distclean" depends="clean">
 		<delete dir="dist" quiet="true" />
+		<delete dir="lib" quiet="true" />
 	</target>
 	
 	<target name="version" description="Shows the version number">
@@ -38,17 +70,16 @@
 		<echo level="info">Lombok patcher version: ${lombok.patcher.version}</echo>
 	</target>
 	
-	<target name="unpackLibs" unless="pointless">
+	<target name="unpackLibs" depends="ensureRuntimeDeps" unless="pointless">
 		<unjar dest="build/pack">
-			<path refid="patcher.libs.path" />
+			<path refid="runtime.path" />
 		</unjar>
 	</target>
 	
-	<target name="compile" depends="unpackLibs" description="Compiles lombok.patcher" unless="pointless">
+	<target name="compile" depends="unpackLibs, ensureBuildDeps" description="Compiles lombok.patcher" unless="pointless">
 		<mkdir dir="build/pack" />
 		<javac srcdir="src" debug="on" destdir="build/pack" target="1.5">
-			<classpath refid="patcher.deps.path" />
-			<classpath refid="patcher.libs.path" />
+			<classpath refid="build.path" />
 		</javac>
 		<copy todir="build/pack">
 			<fileset dir="src">
@@ -58,11 +89,11 @@
 		</copy>
 	</target>
 	
-	<target name="compileTests" depends="compile" description="Compiles the unit tests" unless="skipTests">
+	<target name="compileTests" depends="compile, ensureTestDeps" description="Compiles the unit tests" unless="skipTests">
 		<mkdir dir="build/tests" />
 		<javac srcdir="test" debug="on" destdir="build/tests" target="1.5">
-			<classpath refid="patcher.deps.path" />
 			<classpath path="build/pack" />
+			<classpath refid="test.path" />
 		</javac>
 	</target>
 	
@@ -79,9 +110,9 @@
 	<target name="-test" depends="-test-setup, compileTests" unless="skipTests">
 		<junit haltonfailure="yes" fork="on">
 			<formatter type="plain" usefile="false" unless="tests.quiet" />
-			<classpath refid="patcher.deps.path" />
 			<classpath path="build/pack" />
 			<classpath path="build/tests" />
+			<classpath refid="test.path" />
 			<batchtest>
 				<fileset dir="test">
 					<include name="**/Test*.java" />
@@ -99,8 +130,34 @@
 		<copy file="dist/lombok-patcher-${lombok.patcher.version}.jar" tofile="dist/lombok-patcher.jar" />
 	</target>
 	
-	<taskdef name="scp" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.Scp" classpathref="patcher.deps.path" />
+	<target name="ensure-ivy">
+		<ant antfile="buildScripts/ivy.ant.xml" target="init-ivy" dir="." />
+		<taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpath="lib/ivy.jar" />
+	</target>
+	
+	<target name="config-ivy" depends="ensure-ivy">
+		<ivy:configure file="buildScripts/ivysettings.xml" />
+	</target>
+	
+	<target name="deps" depends="ensureBuildDeps, ensureRuntimeDeps, ensureTestDeps" />
+	
+	<target name="ensureBuildDeps" depends="config-ivy">
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="build" />
+		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
+	</target>
+	
+	<target name="ensureRuntimeDeps" depends="config-ivy">
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="runtime" />
+		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
+	</target>
+	
+	<target name="ensureTestDeps" depends="config-ivy">
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="test" />
+		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
+	</target>
+	
 	<target name="publish" depends="dist" description="Creates distributable and uploads to projectlombok.org">
+		<taskdef name="scp" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.Scp" classpathref="build.path" />
 		<available file="libertad-upload.key" property="libertad.key.available" />
 		<fail unless="libertad.key.available">You don't have the libertad-upload.key; you'll need it to get write access to the server.</fail>
 		<scp

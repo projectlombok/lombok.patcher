@@ -89,6 +89,7 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 		}
 		
 		@Override public void visitCode() {
+			System.err.println("Patching: " + valueWrapper);
 			if (decisionWrapper == null) {
 				//Always return early.
 				if (logistics.getReturnOpcode() == Opcodes.RETURN) {

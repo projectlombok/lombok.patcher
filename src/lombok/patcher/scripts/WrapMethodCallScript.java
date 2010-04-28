@@ -65,7 +65,7 @@ public class WrapMethodCallScript extends MethodLevelPatchScript {
 	
 	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec) {
 		final MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
-			@Override public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
+			public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
 				return new ReplaceMethodCall(parent, classSpec, logistics);
 			}
 		});

@@ -66,11 +66,8 @@ public class MethodLogistics {
 		returnOpcode = returnOpcodeFor(returnSpec);
 		int index = staticOffset;
 		
-		@SuppressWarnings("hiding")
 		List<Integer> paramSizes = new ArrayList<Integer>();
-		@SuppressWarnings("hiding")
 		List<Integer> paramIndices = new ArrayList<Integer>();
-		@SuppressWarnings("hiding")
 		List<Integer> loadOpcodes = new ArrayList<Integer>();
 		
 		while (it.hasNext()) {

@@ -84,7 +84,7 @@ public class ScriptManager {
 	}
 	
 	private final ClassFileTransformer transformer = new ClassFileTransformer() {
-		@Override public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
+		public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 			byte[] byteCode = classfileBuffer;
 			boolean patched = false;
 			if (className == null) return null;

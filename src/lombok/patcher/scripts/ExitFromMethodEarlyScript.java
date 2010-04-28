@@ -62,7 +62,7 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 	
 	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec) {
 		MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
-			@Override public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
+			public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
 				if (valueWrapper == null && !insertCallOnly && logistics.getReturnOpcode() != Opcodes.RETURN) {
 					throw new IllegalStateException("method " + name + desc + " must return something, but " +
 							"you did not provide a value hook method.");

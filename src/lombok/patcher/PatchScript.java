@@ -168,15 +168,15 @@ public abstract class PatchScript {
 	}
 	
 	private static abstract class NoopClassVisitor implements ClassVisitor {
-		@Override public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {}
-		@Override public void visitAttribute(Attribute attr) {}
-		@Override public void visitEnd() {}
-		@Override public void visitOuterClass(String owner, String name, String desc) {}
-		@Override public void visitSource(String source, String debug) {}
-		@Override public void visitInnerClass(String name, String outerName, String innerName, int access) {}
-		@Override public AnnotationVisitor visitAnnotation(String desc, boolean visible) { return null; }
-		@Override public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) { return null; }
-		@Override public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) { return null; }
+		public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {}
+		public void visitAttribute(Attribute attr) {}
+		public void visitEnd() {}
+		public void visitOuterClass(String owner, String name, String desc) {}
+		public void visitSource(String source, String debug) {}
+		public void visitInnerClass(String name, String outerName, String innerName, int access) {}
+		public AnnotationVisitor visitAnnotation(String desc, boolean visible) { return null; }
+		public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) { return null; }
+		public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) { return null; }
 	}
 	
 	protected static void insertMethod(final Hook methodToInsert, final MethodVisitor target) {

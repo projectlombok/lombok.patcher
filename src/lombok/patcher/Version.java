@@ -26,7 +26,7 @@ package lombok.patcher;
  */
 public class Version {
 	// ** CAREFUL ** - this class must always compile with 0 dependencies (it must not refer to any other sources or libraries).
-	private static final String VERSION = "0.2-HEAD";
+	private static final String VERSION = "0.1.1";
 	
 	private Version() {
 		//Prevent instantiation
@@ -40,7 +40,7 @@ public class Version {
 	}
 	
 	/**
-	 * Get the current Lombok version.
+	 * Get the current lombok.patcher version.
 	 */
 	public static String getVersion() {
 		return VERSION;

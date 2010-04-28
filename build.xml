@@ -19,7 +19,19 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   THE SOFTWARE.
 -->
-<project name="lombok.patcher" default="dist" xmlns:ivy="antlib:org.apache.ivy.ant">
+<project name="lombok.patcher" default="dist" xmlns:ivy="antlib:com.zwitserloot.ivyplusplus">
+	<property name="ivy.retrieve.pattern" value="lib/[conf]/[artifact].[ext]" />
+	<available file="lib/ivyplusplus.jar" property="ivyplusplus.available" />
+	
+	<target name="download-ipp" unless="ivyplusplus.available">
+		<mkdir dir="lib" />
+		<get src="http://projectlombok.org/downloads/ivyplusplus.jar" dest="lib/ivyplusplus.jar" usetimestamp="true" />
+	</target>
+	
+	<target name="ensure-ipp" depends="download-ipp">
+		<taskdef classpath="lib/ivyplusplus.jar" resource="com/zwitserloot/ivyplusplus/antlib.xml" uri="antlib:com.zwitserloot.ivyplusplus" />
+	</target>
+	
 	<path id="build.path">
 		<fileset dir="lib/build">
 			<include name="*.jar" />
@@ -44,29 +56,24 @@
 		</uptodate>
 	</target>
 	
-	<target name="clean" description="Deletes build artefacts">
+	<target name="clean" description="Deletes build artefacts.">
 		<delete dir="build" quiet="true" />
 	</target>
 	
-	<target name="distclean" depends="clean">
+	<target name="distclean" depends="clean" description="Deletes everything downloaded or built by this script.">
 		<delete dir="dist" quiet="true" />
 		<delete dir="lib" quiet="true" />
 	</target>
 	
 	<target name="version" description="Shows the version number">
 		<mkdir dir="build/pack" />
-		<javac srcdir="src" debug="on" destdir="build/pack" target="1.5" includes="lombok/patcher/Version.java" />
+		<javac srcdir="src" debug="on" destdir="build/pack" target="1.5" source="1.5" includes="lombok/patcher/Version.java" />
 		<java
 			classname="lombok.patcher.Version"
 			classpath="build/pack"
 			failonerror="true"
 			output="build/version.txt" />
-		<loadresource property="lombok.patcher.version">
-			<file file="build/version.txt" />
-			<filterchain>
-				<striplinebreaks />
-			</filterchain>
-		</loadresource>
+		<ivy:loadversion property="lombok.patcher.version" file="build/version.txt" />
 		<echo level="info">Lombok patcher version: ${lombok.patcher.version}</echo>
 	</target>
 	
@@ -77,24 +84,16 @@
 	</target>
 	
 	<target name="compile" depends="unpackLibs, ensureBuildDeps" description="Compiles lombok.patcher" unless="pointless">
-		<mkdir dir="build/pack" />
-		<javac srcdir="src" debug="on" destdir="build/pack" target="1.5">
+		<ivy:javac-copy srcdir="src" destdir="build/pack" target="1.5" source="1.5">
 			<classpath refid="build.path" />
-		</javac>
-		<copy todir="build/pack">
-			<fileset dir="src">
-				<exclude name="**/*.java" />
-				<exclude name="**/*.class" />
-			</fileset>
-		</copy>
+		</ivy:javac-copy>
 	</target>
 	
 	<target name="compileTests" depends="compile, ensureTestDeps" description="Compiles the unit tests" unless="skipTests">
-		<mkdir dir="build/tests" />
-		<javac srcdir="test" debug="on" destdir="build/tests" target="1.5">
+		<ivy:javac-copy srcdir="test" destdir="build/tests" target="1.5" source="1.5">
 			<classpath path="build/pack" />
 			<classpath refid="test.path" />
-		</javac>
+		</ivy:javac-copy>
 	</target>
 	
 	<target name="-test.quiet">
@@ -130,16 +129,11 @@
 		<copy file="dist/lombok.patcher-${lombok.patcher.version}.jar" tofile="dist/lombok.patcher.jar" />
 	</target>
 	
-	<target name="ensure-ivy">
-		<ant antfile="buildScripts/ivy.ant.xml" target="init-ivy" dir="." />
-		<taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpath="lib/ivy.jar" />
-	</target>
-	
-	<target name="config-ivy" depends="ensure-ivy">
+	<target name="config-ivy" depends="ensure-ipp">
 		<ivy:configure file="buildScripts/ivysettings.xml" />
 	</target>
 	
-	<target name="deps" depends="ensureBuildDeps, ensureRuntimeDeps, ensureTestDeps" description="Downloads / updates all dependencies. No need to call this manually, though useful to run before opening this directory as an eclipse project." />
+	<target name="deps" depends="ensureBuildDeps, ensureRuntimeDeps, ensureTestDeps" />
 	
 	<target name="ensureBuildDeps" depends="config-ivy">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="build" />
@@ -161,6 +155,10 @@
 		<ivy:retrieve pattern="contrib/[artifact].[ext]" />
 	</target>
 	
+	<target name="show-dep-report" depends="ensureBuildDeps" description="Displays a dependencies report">
+		<ivy:show-dep-report />
+	</target>
+	
 	<target name="publish" depends="dist" description="Creates distributable and uploads to projectlombok.org">
 		<taskdef name="scp" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.Scp" classpathref="build.path" />
 		<taskdef name="sshexec" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.SSHExec" classpathref="build.path" />
@@ -176,5 +174,17 @@
 				username="lombokup"
 				keyfile="libertad-upload.key" passphrase=""
 				trust="true" command="./deployLombokPatcher '${lombok.patcher.version}'" />
+	</target>
+	
+	<target name="eclipse" depends="deps" description="Creates eclipse project files and downloads all dependencies. Open this directory as project in eclipse after running this target.">
+		<ivy:eclipsegen source="1.5">
+			<srcdir dir="src" />
+			<srcdir dir="test" />
+			<conf name="build" />
+			<conf name="test" />
+			<settings>
+				<url url="http://projectlombok.org/downloads/lombok.eclipse.settings" />
+			</settings>
+		</ivy:eclipsegen>
 	</target>
 </project>

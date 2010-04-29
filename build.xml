@@ -63,6 +63,9 @@
 	<target name="distclean" depends="clean" description="Deletes everything downloaded or built by this script.">
 		<delete dir="dist" quiet="true" />
 		<delete dir="lib" quiet="true" />
+		<delete file=".classpath" quiet="true" />
+		<delete file=".project" quiet="true" />
+		<delete dir=".settings" quiet="true" />
 	</target>
 	
 	<target name="version" description="Shows the version number">
@@ -137,22 +140,22 @@
 	
 	<target name="ensureBuildDeps" depends="config-ivy">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="build" />
-		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
+		<ivy:retrieve />
 	</target>
 	
 	<target name="ensureRuntimeDeps" depends="config-ivy">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="runtime" />
-		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
+		<ivy:retrieve />
 	</target>
 	
 	<target name="ensureTestDeps" depends="config-ivy">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="test" />
-		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
+		<ivy:retrieve />
 	</target>
 	
 	<target name="contrib" depends="config-ivy" description="Downloads and builds useful but optional extras, such as sources to used libraries.">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="contrib" />
-		<ivy:retrieve pattern="contrib/[artifact].[ext]" />
+		<ivy:retrieve />
 	</target>
 	
 	<target name="show-dep-report" depends="ensureBuildDeps" description="Displays a dependencies report">
@@ -176,12 +179,12 @@
 				trust="true" command="./deployLombokPatcher '${lombok.patcher.version}'" />
 	</target>
 	
-	<target name="eclipse" depends="deps" description="Creates eclipse project files and downloads all dependencies. Open this directory as project in eclipse after running this target.">
+	<target name="eclipse" depends="deps, contrib" description="Creates eclipse project files and downloads all dependencies. Open this directory as project in eclipse after running this target.">
 		<ivy:eclipsegen source="1.5">
 			<srcdir dir="src" />
 			<srcdir dir="test" />
-			<conf name="build" />
-			<conf name="test" />
+			<conf name="build" sources="contrib" />
+			<conf name="test" sources="contrib" />
 			<settings>
 				<url url="http://projectlombok.org/downloads/lombok.eclipse.settings" />
 			</settings>

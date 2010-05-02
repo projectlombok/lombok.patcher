@@ -68,7 +68,7 @@
 		<delete dir=".settings" quiet="true" />
 	</target>
 	
-	<target name="version" description="Shows the version number">
+	<target name="version" depends="ensure-ipp" description="Shows the version number.">
 		<mkdir dir="build/pack" />
 		<javac srcdir="src" debug="on" destdir="build/pack" target="1.5" source="1.5" includes="lombok/patcher/Version.java" />
 		<java
@@ -87,16 +87,16 @@
 	</target>
 	
 	<target name="compile" depends="unpackLibs, ensureBuildDeps" description="Compiles lombok.patcher" unless="pointless">
-		<ivy:javac-copy srcdir="src" destdir="build/pack" target="1.5" source="1.5">
+		<ivy:compile srcdir="src" destdir="build/pack" target="1.5" source="1.5">
 			<classpath refid="build.path" />
-		</ivy:javac-copy>
+		</ivy:compile>
 	</target>
 	
 	<target name="compileTests" depends="compile, ensureTestDeps" description="Compiles the unit tests" unless="skipTests">
-		<ivy:javac-copy srcdir="test" destdir="build/tests" target="1.5" source="1.5">
+		<ivy:compile srcdir="test" destdir="build/tests" target="1.5" source="1.5">
 			<classpath path="build/pack" />
 			<classpath refid="test.path" />
-		</ivy:javac-copy>
+		</ivy:compile>
 	</target>
 	
 	<target name="-test.quiet">
@@ -158,7 +158,7 @@
 		<ivy:retrieve />
 	</target>
 	
-	<target name="show-dep-report" depends="ensureBuildDeps" description="Displays a dependencies report">
+	<target name="show-dep-report" depends="ensureRuntimeDeps" description="Displays a dependencies report">
 		<ivy:show-dep-report />
 	</target>
 	

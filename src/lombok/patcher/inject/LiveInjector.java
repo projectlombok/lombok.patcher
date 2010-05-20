@@ -23,6 +23,8 @@ package lombok.patcher.inject;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
+import java.lang.management.ManagementFactory;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 
@@ -58,7 +60,7 @@ public class LiveInjector {
 	 * This interface is used internally by the {@code LiveInjector} to interface with the VM core.
 	 */
 	public interface LibJVM extends Library {
-		int JNI_GetCreatedJavaVMs(PointerByReference vms, int  count, IntByReference found);
+		int JNI_GetCreatedJavaVMs(PointerByReference vms, int count, IntByReference found);
 	}
 	
 	/**
@@ -78,6 +80,14 @@ public class LiveInjector {
 	 * @throws IllegalStateException If this is not a sun-derived v1.6 VM.
 	 */
 	public void inject(String jarFile) throws IllegalStateException {
+		if (System.getProperty("lombok.patcher.safeInject", null) != null) {
+			slowInject(jarFile);
+		} else {
+			fastInject(jarFile);
+		}
+	}
+	
+	private void fastInject(String jarFile) throws IllegalStateException {
 		try {
 			Class.forName("sun.instrument.InstrumentationImpl");
 		} catch (ClassNotFoundException e) {
@@ -91,6 +101,31 @@ public class LiveInjector {
 		LibInstrument libinstrument = (LibInstrument)Native.loadLibrary(LibInstrument.class);
 		Pointer vm = vms.getValue();
 		libinstrument.Agent_OnAttach(vm, jarFile, null);
+	}
+	
+	private void slowInject(String jarFile) throws IllegalStateException {
+		String ownPidS = ManagementFactory.getRuntimeMXBean().getName();
+		ownPidS = ownPidS.substring(0, ownPidS.indexOf('@'));
+		int ownPid = Integer.parseInt(ownPidS);
+		boolean unsupportedEnvironment = false;
+		Throwable exception = null;
+		try {
+			Class<?> vmClass = Class.forName("com.sun.tools.attach.VirtualMachine");
+			Object vm = vmClass.getMethod("attach", String.class).invoke(null, String.valueOf(ownPid));
+			vmClass.getMethod("loadAgent", String.class).invoke(vm, jarFile);
+		} catch (ClassNotFoundException e) {
+			unsupportedEnvironment = true;
+		} catch (NoSuchMethodException e) {
+			unsupportedEnvironment = true;
+		} catch (InvocationTargetException e) {
+			exception = e.getCause();
+			if (exception == null) exception = e;
+		} catch (Throwable t) {
+			exception = t;
+		}
+		
+		if (unsupportedEnvironment) throw new IllegalStateException("agent injection only works on a sun-derived 1.6 or higher VM");
+		if (exception != null) throw new IllegalStateException("agent injection not supported on this platform due to unknown reason", exception);
 	}
 	
 	/**

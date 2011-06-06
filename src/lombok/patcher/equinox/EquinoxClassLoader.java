@@ -65,7 +65,7 @@ import lombok.patcher.scripts.ScriptBuilder;
 public class EquinoxClassLoader extends ClassLoader {
 	private static Map<ClassLoader, EquinoxClassLoader> hostLoaders = new HashMap<ClassLoader, EquinoxClassLoader>();
 	private static EquinoxClassLoader coreLoader = new EquinoxClassLoader();
-	private static Method resolveMethod;	//cache
+	private static Method resolveMethod;  //cache
 	private static final List<String> prefixes = new ArrayList<String>();
 	private static final List<String> corePrefixes = new ArrayList<String>();
 	private final List<File> classpath = new ArrayList<File>();

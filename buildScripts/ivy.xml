@@ -11,7 +11,7 @@
 		<dependency org="projectlombok.org" name="junit" rev="4.8.1" conf="test" />
 		<dependency org="jcraft.com" name="jsch" rev="0.1.42" conf="build" />
 		<dependency org="projectlombok.org" name="jsch-ant-fixed" rev="0.1.42" conf="build" />
-		<dependency org="ow2.org" name="asm" rev="trunk20091006" conf="runtime->master; build->master; contrib->sources" />
+		<dependency org="org.ow2.custom" name="asm" rev="4.0_RC1" conf="runtime->master; build->master; contrib->sources" />
 		<dependency org="net.java.dev.jna" name="jna" rev="3.2.2" conf="runtime->master; build->master" />
 	</dependencies>
 </ivy-module>

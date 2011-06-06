@@ -4,6 +4,7 @@
 bin
 build
 dist
-libertad-upload.key
+escudo-upload.key
 lib
 contrib
+ivyCache

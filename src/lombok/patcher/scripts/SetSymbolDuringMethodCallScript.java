@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Project Lombok Authors.
+ * Copyright (C) 2009-2012 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,6 @@ import lombok.patcher.TargetMatcher;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodAdapter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
@@ -60,9 +59,9 @@ public class SetSymbolDuringMethodCallScript extends MethodLevelPatchScript {
 		return patcher;
 	}
 	
-	private class WrapWithSymbol extends MethodAdapter {
+	private class WrapWithSymbol extends MethodVisitor {
 		public WrapWithSymbol(MethodVisitor mv) {
-			super(mv);
+			super(Opcodes.ASM4, mv);
 		}
 		
 		@Override public void visitMethodInsn(int opcode, String owner, String name, String desc) {

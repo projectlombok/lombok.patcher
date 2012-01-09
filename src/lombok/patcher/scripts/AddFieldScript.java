@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Project Lombok Authors.
+ * Copyright (C) 2009-2012 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,10 +27,10 @@ import java.util.Collections;
 import lombok.patcher.MethodTarget;
 import lombok.patcher.PatchScript;
 
-import org.objectweb.asm.ClassAdapter;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.Opcodes;
 
 /**
  * Adds a field to any class.
@@ -64,7 +64,7 @@ public class AddFieldScript extends PatchScript {
 	}
 	
 	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, String classSpec) {
-		return new ClassAdapter(writer) {
+		return new ClassVisitor(Opcodes.ASM4, writer) {
 			@Override public void visitEnd() {
 				FieldVisitor fv = cv.visitField(accessFlags, fieldName, fieldType, null, value);
 				fv.visitEnd();

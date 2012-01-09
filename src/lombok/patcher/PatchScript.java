@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 The Project Lombok Authors.
+ * Copyright (C) 2009-2012 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,13 +34,11 @@ import lombok.Getter;
 
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Attribute;
-import org.objectweb.asm.ClassAdapter;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodAdapter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.commons.JSRInlinerAdapter;
@@ -114,7 +112,7 @@ public abstract class PatchScript {
 		ClassReader reader = new ClassReader(byteCode);
 		ClassWriter writer = new FixedClassWriter(reader, 0);
 		
-		ClassVisitor visitor = new ClassAdapter(writer) {
+		ClassVisitor visitor = new ClassVisitor(Opcodes.ASM4, writer) {
 			@Override public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
 				return new JSRInlinerAdapter(super.visitMethod(access, name, desc, signature, exceptions), access, name, desc, signature, exceptions);
 			}
@@ -167,7 +165,11 @@ public abstract class PatchScript {
 		}
 	}
 	
-	private static abstract class NoopClassVisitor implements ClassVisitor {
+	private static abstract class NoopClassVisitor extends ClassVisitor {
+		public NoopClassVisitor() {
+			super(Opcodes.ASM4);
+		}
+		
 		public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {}
 		public void visitAttribute(Attribute attr) {}
 		public void visitEnd() {}
@@ -209,9 +211,9 @@ public abstract class PatchScript {
 		reader.accept(methodFinder, 0);
 	}
 
-	private static final class InsertBodyOfMethodIntoAnotherVisitor extends MethodAdapter {
+	private static final class InsertBodyOfMethodIntoAnotherVisitor extends MethodVisitor {
 		private InsertBodyOfMethodIntoAnotherVisitor(MethodVisitor mv) {
-			super(mv);
+			super(Opcodes.ASM4, mv);
 		}
 		
 		@Override public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) { return null; }
@@ -235,18 +237,18 @@ public abstract class PatchScript {
 	}
 	
 	/**
-	 * Convenience implementation of the {@code ClassAdapter} that you can return for {@see #createClassVisitor(ClassWriter)};
+	 * Convenience implementation of the {@code ClassVisitor} that you can return for {@see #createClassVisitor(ClassWriter)};
 	 * it will call into a custom {@code MethodVisitor} for specified methods, and pass through everything else. Perfect if you
 	 * want to rewrite one or more methods.
 	 */
-	protected static class MethodPatcher extends ClassAdapter {
+	protected static class MethodPatcher extends ClassVisitor {
 		private List<TargetMatcher> targets = new ArrayList<TargetMatcher>();
 		private @Getter String ownClassSpec;
 		private final MethodPatcherFactory factory;
 		private List<Hook> transplants = new ArrayList<Hook>();
 		
 		public MethodPatcher(ClassVisitor cv, MethodPatcherFactory factory) {
-			super(cv);
+			super(Opcodes.ASM4, cv);
 			this.factory = factory;
 		}
 		

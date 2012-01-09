@@ -37,8 +37,7 @@ import org.objectweb.asm.Opcodes;
 /**
  * Replaces all calls to a given method with another (static) method. It is your job to ensure both all parameters and the
  * return type are perfectly compatible. If you're replacing an instance method, make sure your static method's first
- * parameter is type-compatible with the LHS of the instance method. You must also return something that is compatible with
- * the method you're replacing.
+ * parameter is type-compatible with the LHS of the instance method.
  */
 public class ReplaceMethodCallScript extends MethodLevelPatchScript {
 	private final Hook wrapper;

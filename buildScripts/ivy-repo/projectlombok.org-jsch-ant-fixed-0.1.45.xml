@@ -1,5 +1,5 @@
 <ivy-module version="2.0">
-	<info organisation="projectlombok.org" module="jsch-ant-fixed" revision="0.1.42" publication="20100225011200">
+	<info organisation="projectlombok.org" module="jsch-ant-fixed" revision="0.1.45" publication="20100225011200">
 		<license name="BSD" url="http://www.jcraft.com/jsch/LICENSE.txt" />
 		<description homepage="http://www.jcraft.com/jsch/" />
 	</info>

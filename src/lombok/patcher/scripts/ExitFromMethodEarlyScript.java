@@ -24,7 +24,6 @@ package lombok.patcher.scripts;
 import java.util.List;
 import java.util.Set;
 
-import lombok.NonNull;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodLogistics;
 import lombok.patcher.StackRequest;
@@ -40,7 +39,7 @@ import org.objectweb.asm.Opcodes;
  * the method continue.
  */
 public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
-	private final @NonNull Hook decisionWrapper, valueWrapper;
+	private final Hook decisionWrapper, valueWrapper;
 	private final Set<StackRequest> requests;
 	private final boolean transplant, insert;
 	private final boolean insertCallOnly;

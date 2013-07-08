@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Project Lombok Authors.
+ * Copyright (C) 2009-2013 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,8 @@ import java.util.Set;
 import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 
+import lombok.Cleanup;
+import lombok.Synchronized;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodTarget;
 import lombok.patcher.ScriptManager;
@@ -131,9 +133,9 @@ public class EquinoxClassLoader extends ClassLoader {
 	 * If the system classloader can't find it either, try loading via any registered subLoaders.
 	 * If we still haven't found it, fail.
 	 */
-	@Override protected synchronized Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+	@Override @Synchronized("defineCache") protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
 		boolean controlLoad = false;
-		
+	
 		WeakReference<Class<?>> ref = defineCache.get(name);
 		if (ref != null) {
 			Class<?> result = ref.get();
@@ -163,7 +165,7 @@ public class EquinoxClassLoader extends ClassLoader {
 		for (File file : classpath) {
 			if (file.isFile()) {
 				try {
-					JarFile jf = new JarFile(file);
+					@Cleanup JarFile jf = new JarFile(file);
 					ZipEntry entry = jf.getEntry(name);
 					if (entry == null) continue;
 					byte[] classData = readStream(jf.getInputStream(entry));

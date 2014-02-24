@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2013 The Project Lombok Authors.
+ * Copyright (C) 2009-2014 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 
@@ -65,11 +67,12 @@ import lombok.patcher.scripts.ScriptBuilder;
  * </ul>
  */
 public class EquinoxClassLoader extends ClassLoader {
-	private static Map<ClassLoader, EquinoxClassLoader> hostLoaders = new HashMap<ClassLoader, EquinoxClassLoader>();
-	private static EquinoxClassLoader coreLoader = new EquinoxClassLoader();
+	private static final ConcurrentMap<ClassLoader, EquinoxClassLoader> hostLoaders = new ConcurrentHashMap<ClassLoader, EquinoxClassLoader>();
+	private static final EquinoxClassLoader coreLoader = new EquinoxClassLoader();
 	private static Method resolveMethod;  //cache
 	private static final List<String> prefixes = new ArrayList<String>();
 	private static final List<String> corePrefixes = new ArrayList<String>();
+	
 	private final List<File> classpath = new ArrayList<File>();
 	private final List<ClassLoader> subLoaders = new ArrayList<ClassLoader>();
 	private final Set<String> cantFind = new HashSet<String>();
@@ -133,7 +136,7 @@ public class EquinoxClassLoader extends ClassLoader {
 	 * If the system classloader can't find it either, try loading via any registered subLoaders.
 	 * If we still haven't found it, fail.
 	 */
-	@Override @Synchronized("defineCache") protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+	@Override @Synchronized protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
 		boolean controlLoad = false;
 	
 		WeakReference<Class<?>> ref = defineCache.get(name);
@@ -255,14 +258,12 @@ public class EquinoxClassLoader extends ClassLoader {
 	}
 	
 	private static EquinoxClassLoader getHostLoader(ClassLoader original) {
-		synchronized (hostLoaders) {
-			EquinoxClassLoader ecl = hostLoaders.get(original);
-			if (ecl != null) return ecl;
-			ecl = new EquinoxClassLoader();
-			ecl.addSubLoader(original);
-			hostLoaders.put(original, ecl);
-			return ecl;
-		}
+		EquinoxClassLoader ecl = hostLoaders.get(original);
+		if (ecl != null) return ecl;
+		ecl = new EquinoxClassLoader();
+		ecl.addSubLoader(original);
+		hostLoaders.putIfAbsent(original, ecl);
+		return hostLoaders.get(original);
 	}
 	
 	/**

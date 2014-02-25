@@ -27,21 +27,17 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 
 import lombok.Cleanup;
-import lombok.Synchronized;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodTarget;
 import lombok.patcher.ScriptManager;
@@ -69,16 +65,24 @@ import lombok.patcher.scripts.ScriptBuilder;
 public class EquinoxClassLoader extends ClassLoader {
 	private static final ConcurrentMap<ClassLoader, EquinoxClassLoader> hostLoaders = new ConcurrentHashMap<ClassLoader, EquinoxClassLoader>();
 	private static final EquinoxClassLoader coreLoader = new EquinoxClassLoader();
-	private static Method resolveMethod;  //cache
+	private static final Method resolveMethod;
 	private static final List<String> prefixes = new ArrayList<String>();
 	private static final List<String> corePrefixes = new ArrayList<String>();
 	
 	private final List<File> classpath = new ArrayList<File>();
 	private final List<ClassLoader> subLoaders = new ArrayList<ClassLoader>();
-	private final Set<String> cantFind = new HashSet<String>();
+	private final ConcurrentHashMap<String, String> cantFind = new ConcurrentHashMap<String, String>();
 	
 	static {
 		corePrefixes.add("lombok.patcher.");
+		Method m = null;
+		try {
+			m = ClassLoader.class.getDeclaredMethod("resolveClass", Class.class);
+			m.setAccessible(true);
+		} catch (Exception ignore) {
+			// This is bad, but other than just not resolving and hope it works out, there's nothing we can do.
+		}
+		resolveMethod = m;
 	}
 	
 	private EquinoxClassLoader() {
@@ -126,7 +130,7 @@ public class EquinoxClassLoader extends ClassLoader {
 		t.printStackTrace();
 	}
 	
-	private final Map<String, WeakReference<Class<?>>> defineCache = new HashMap<String, WeakReference<Class<?>>>();
+	private final ConcurrentMap<String, WeakReference<Class<?>>> defineCache = new ConcurrentHashMap<String, WeakReference<Class<?>>>();
 	
 	/*
 	 * Load order:
@@ -136,20 +140,16 @@ public class EquinoxClassLoader extends ClassLoader {
 	 * If the system classloader can't find it either, try loading via any registered subLoaders.
 	 * If we still haven't found it, fail.
 	 */
-	@Override @Synchronized protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+	@Override protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
 		boolean controlLoad = false;
-	
-		WeakReference<Class<?>> ref = defineCache.get(name);
-		if (ref != null) {
-			Class<?> result = ref.get();
-			if (result != null) return result;
-			defineCache.remove(name);
-		}
+		ClassLoader resolver = resolve ? this : null;
+		Class<?> alreadyLoaded = setCached(name, null, resolver);
+		if (alreadyLoaded != null) return alreadyLoaded;
 		
 		for (String corePrefix : corePrefixes) {
 			if (name.startsWith(corePrefix)) {
 				if (this != coreLoader) {
-					return coreLoader.loadClass(name, resolve);
+					return setCached(name, coreLoader.loadClass(name, resolve), resolver);
 				}
 				controlLoad = true;
 				break;
@@ -163,7 +163,6 @@ public class EquinoxClassLoader extends ClassLoader {
 			}
 		}
 		
-		Class<?> c = null;
 		
 		for (File file : classpath) {
 			if (file.isFile()) {
@@ -172,9 +171,7 @@ public class EquinoxClassLoader extends ClassLoader {
 					ZipEntry entry = jf.getEntry(name);
 					if (entry == null) continue;
 					byte[] classData = readStream(jf.getInputStream(entry));
-					c = defineClass(name, classData, 0, classData.length);
-					defineCache.put(name, new WeakReference<Class<?>>(c));
-					break;
+					return setCached(name, defineClass(name, classData, 0, classData.length), resolver);
 				} catch (IOException e) {
 					logLoadError(e);
 				}
@@ -183,27 +180,17 @@ public class EquinoxClassLoader extends ClassLoader {
 				if (!target.exists()) continue;
 				try {
 					byte[] classData = readStream(new FileInputStream(target));
-					c = defineClass(name, classData, 0, classData.length);
-					defineCache.put(name, new WeakReference<Class<?>>(c));
-					break;
+					return setCached(name, defineClass(name, classData, 0, classData.length), resolver);
 				} catch (IOException e) {
 					logLoadError(e);
 				}
 			}
 		}
 		
-		if (c != null) {
-			if (resolve) resolveClass(c);
-			return c;
-		}
-		
 		if (controlLoad) {
 			try {
 				byte[] classData = readStream(super.getResourceAsStream(name.replace(".", "/") + ".class"));
-				c = defineClass(name, classData, 0, classData.length);
-				defineCache.put(name, new WeakReference<Class<?>>(c));
-				if (resolve) resolveClass(c);
-				return c;
+				return setCached(name, defineClass(name, classData, 0, classData.length), resolver);
 			} catch (Exception ignore) {
 			} catch (UnsupportedClassVersionError e) {
 				System.err.println("BAD CLASS VERSION TRYING TO LOAD: " + name);
@@ -211,35 +198,70 @@ public class EquinoxClassLoader extends ClassLoader {
 			}
 		} else {
 			try {
-				return super.loadClass(name, resolve);
+				return setCached(name, super.loadClass(name, resolve), resolver);
 			} catch (ClassNotFoundException ignore) {}
 		}
 		
-		cantFind.add(name);
+		cantFind.put(name, name);
 		
 		for (ClassLoader subLoader : subLoaders) {
 			try {
-				c = subLoader.loadClass(name);
-				if (resolve) {
-					if (resolveMethod == null) {
-						try {
-							Method m = ClassLoader.class.getDeclaredMethod("resolveClass", Class.class);
-							m.setAccessible(true);
-							resolveMethod = m;
-						} catch (Exception ignore) {}
-					}
-					
-					if (resolveMethod != null) {
-						try {
-							resolveMethod.invoke(subLoader, c);
-						} catch (Exception ignore) {}
-					}
-				}
-				return c;
+				return setCached(name, subLoader.loadClass(name), resolve ? subLoader : null);
 			} catch (ClassNotFoundException ignore) {}
 		}
 		
 		throw new ClassNotFoundException(name);
+	}
+	
+	private static Class<?> resolveClass_(Class<?> c, ClassLoader resolver) {
+		if (resolver == null || resolveMethod == null) return c;
+		try {
+			resolveMethod.invoke(resolver, c);
+		} catch (InvocationTargetException e) {
+			throw sneakyThrow(e);
+		} catch (IllegalAccessException e) {
+			// intentional fallthrough
+		} catch (IllegalArgumentException e) {
+			// intentional fallthrough
+		}
+		return c;
+	}
+	
+	public static RuntimeException sneakyThrow(Throwable t) {
+		if (t == null) throw new NullPointerException("t");
+		EquinoxClassLoader.<RuntimeException>sneakyThrow0(t);
+		return null;
+	}
+	
+	@SuppressWarnings("unchecked")
+	private static <T extends Throwable> void sneakyThrow0(Throwable t) throws T {
+		throw (T)t;
+	}
+	
+	private Class<?> setCached(String name, Class<?> c, ClassLoader resolver) {
+		if (c == null) {
+			// setCached was called just as a check if the class is (now) available in cache.
+			WeakReference<Class<?>> prevRef = defineCache.get(name);
+			Class<?> prev = prevRef == null ? null : prevRef.get();
+			if (prev == null) return null;
+			return resolveClass_(prev, resolver);
+		}
+		
+		WeakReference<Class<?>> prevRef = defineCache.putIfAbsent(name, new WeakReference<Class<?>>(c));
+		if (prevRef == null) {
+			// 'our' class object is the one that is now in the cache, so, return it.
+			return resolveClass_(c, resolver);
+		}
+		
+		Class<?> prev = prevRef.get();
+		if (prev != null) {
+			// A different thread was building at the same time and got there before we did, so use that one and toss ours.
+			return resolveClass_(prev, resolver);
+		}
+		
+		// We caught the cache in the middle of a garbage collect. Assuming nobody else wiped this ref from the cache, we wipe it, and start over.
+		defineCache.remove(name, prevRef);
+		return setCached(name, c, resolver);
 	}
 	
 	private static byte[] readStream(InputStream in) throws IOException {
@@ -275,7 +297,7 @@ public class EquinoxClassLoader extends ClassLoader {
 	 */
 	public static boolean overrideLoadDecide(ClassLoader original, String name, boolean resolve) {
 		EquinoxClassLoader hostLoader = getHostLoader(original);
-		if (hostLoader.cantFind.contains(name)) return false;
+		if (hostLoader.cantFind.containsKey(name)) return false;
 		for (String prefix : prefixes) {
 			if (name.startsWith(prefix)) return true;
 		}

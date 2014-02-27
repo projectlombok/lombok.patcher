@@ -1,5 +1,5 @@
 <!--
-  Copyright (C) 2009 The Project Lombok Authors.
+  Copyright (C) 2009-2014 The Project Lombok Authors.
   
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -21,16 +21,24 @@
 -->
 <project name="lombok.patcher" default="dist" xmlns:ivy="antlib:com.zwitserloot.ivyplusplus">
 	<property name="ivy.retrieve.pattern" value="lib/[conf]/[artifact].[ext]" />
-	<available file="lib/ivyplusplus.jar" property="ivyplusplus.available" />
+	<available classpath="lib/ivyplusplus.jar" classname="com.zwitserloot.ivyplusplus.EnsureVersion" property="ivyplusplus.available" />
 	
 	<target name="download-ipp" unless="ivyplusplus.available">
 		<mkdir dir="lib" />
 		<get src="http://projectlombok.org/downloads/ivyplusplus.jar" dest="lib/ivyplusplus.jar" usetimestamp="true" />
 	</target>
 	
-	<target name="ensure-ipp" depends="download-ipp">
+	<target name="load-ipp" depends="download-ipp">
 		<taskdef classpath="lib/ivyplusplus.jar" resource="com/zwitserloot/ivyplusplus/antlib.xml" uri="antlib:com.zwitserloot.ivyplusplus" />
+		<ivy:ensureippversion version="1.13" property="ivyplusplus.minimumAvailable" />
 	</target>
+
+	<target name="redownload-ipp" unless="ivyplusplus.minimumAvailable">
+		<get src="http://projectlombok.org/downloads/ivyplusplus.jar" dest="lib/ivyplusplus.jar" />
+		<fail>A new version of ivyplusplus was required and has been downloaded. Rerun the script to continue.</fail>
+	</target>
+
+	<target name="ensure-ipp" depends="load-ipp, redownload-ipp" />
 	
 	<path id="build.path">
 		<fileset dir="lib/build">
@@ -185,6 +193,10 @@
 			<srcdir dir="test" />
 			<conf name="build" sources="contrib" />
 			<conf name="test" sources="contrib" />
+			<export org="org.ow2.asm" name="asm" />
+			<export org="org.ow2.asm" name="asm-tree" />
+			<export org="org.ow2.asm" name="asm-commons" />
+			<export org="net.java.dev.jna" name="jna" />
 			<settings>
 				<url url="http://projectlombok.org/downloads/lombok.eclipse.settings" />
 			</settings>

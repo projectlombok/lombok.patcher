@@ -114,6 +114,8 @@ public class EquinoxClassLoader extends ClassLoader {
 						"java.lang.Class", "java.lang.String", "boolean"))
 				.target(new MethodTarget("org.eclipse.osgi.framework.adapter.core.AbstractClassLoader", "loadClass",
 						"java.lang.Class", "java.lang.String", "boolean"))
+				.target(new MethodTarget("org.eclipse.osgi.internal.loader.ModuleClassLoader", "loadClass",
+						"java.lang.Class", "java.lang.String", "boolean"))
 				.decisionMethod(new Hook(SELF_NAME, "overrideLoadDecide", "boolean", "java.lang.ClassLoader", "java.lang.String", "boolean"))
 				.valueMethod(new Hook(SELF_NAME, "overrideLoadResult", "java.lang.Class", "java.lang.ClassLoader", "java.lang.String", "boolean"))
 				.request(StackRequest.THIS, StackRequest.PARAM1, StackRequest.PARAM2).build());

@@ -26,7 +26,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 
-public class HomeFinder {
+public class ClassRootFinder {
 	private static String urlDecode(String in) {
 		try {
 			return URLDecoder.decode(in, Charset.defaultCharset().name());
@@ -39,11 +39,11 @@ public class HomeFinder {
 		}
 	}
 	
-	public static String findHomeOfSelf() {
-		return findHomeOfClass(HomeFinder.class);
+	public static String findClassRootOfSelf() {
+		return findClassRootOfClass(ClassRootFinder.class);
 	}
 	
-	public static String findHomeOfClass(Class<?> context) {
+	public static String findClassRootOfClass(Class<?> context) {
 		String name = context.getName();
 		int idx = name.lastIndexOf('.');
 		if (idx > -1) name = name.substring(idx + 1);
@@ -60,8 +60,6 @@ public class HomeFinder {
 			String jarLoc = self.substring(4, sep);
 			if (jarLoc.startsWith("file:/")) {
 				jarLoc = urlDecode(jarLoc.substring(5));
-				int lastSlash = jarLoc.lastIndexOf('/');
-				if (lastSlash > 0) jarLoc = jarLoc.substring(0, lastSlash);
 				self = jarLoc;
 			} else throw new IllegalArgumentException("Unknown path structure: " + self);
 		} else {
@@ -74,6 +72,6 @@ public class HomeFinder {
 	}
 	
 	public static void main(String[] args) {
-		System.out.println(findHomeOfSelf());
+		System.out.println(findClassRootOfSelf());
 	}
 }

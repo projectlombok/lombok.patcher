@@ -38,7 +38,7 @@ import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 
 import lombok.Cleanup;
-import lombok.patcher.HomeFinder;
+import lombok.patcher.ClassRootFinder;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodTarget;
 import lombok.patcher.ScriptManager;
@@ -86,7 +86,7 @@ public class EquinoxClassLoader extends ClassLoader {
 	}
 	
 	private EquinoxClassLoader() {
-		this.classpath.add(new File(HomeFinder.findHomeOfClass(EquinoxClassLoader.class)));
+		this.classpath.add(new File(ClassRootFinder.findClassRootOfClass(EquinoxClassLoader.class)));
 	}
 	
 	/**

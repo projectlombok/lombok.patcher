@@ -25,7 +25,7 @@ import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.InvocationTargetException;
 
-import lombok.patcher.HomeFinder;
+import lombok.patcher.ClassRootFinder;
 
 import com.sun.jna.Library;
 import com.sun.jna.Native;
@@ -68,7 +68,7 @@ public class LiveInjector {
 	 * @throws IllegalStateException If this is not a sun-derived v1.6 VM.
 	 */
 	public void injectSelf() throws IllegalStateException {
-		inject(HomeFinder.findHomeOfSelf());
+		inject(ClassRootFinder.findClassRootOfSelf());
 	}
 	
 	/**

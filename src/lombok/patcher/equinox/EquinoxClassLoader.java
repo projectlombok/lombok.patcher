@@ -38,11 +38,11 @@ import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 
 import lombok.Cleanup;
+import lombok.patcher.HomeFinder;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodTarget;
 import lombok.patcher.ScriptManager;
 import lombok.patcher.StackRequest;
-import lombok.patcher.inject.LiveInjector;
 import lombok.patcher.scripts.ScriptBuilder;
 
 /**
@@ -86,7 +86,7 @@ public class EquinoxClassLoader extends ClassLoader {
 	}
 	
 	private EquinoxClassLoader() {
-		this.classpath.add(new File(LiveInjector.findPathJar(EquinoxClassLoader.class)));
+		this.classpath.add(new File(HomeFinder.findHomeOfClass(EquinoxClassLoader.class)));
 	}
 	
 	/**

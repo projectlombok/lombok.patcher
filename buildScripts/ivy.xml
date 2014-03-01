@@ -4,6 +4,7 @@
 		<conf name="build" />
 		<conf name="runtime" />
 		<conf name="test" extends="build, runtime" />
+		<conf name="runtimeInjector" />
 		<conf name="contrib" />
 	</configurations>
 	<dependencies>
@@ -14,6 +15,6 @@
 		<dependency org="org.ow2.asm" name="asm" rev="4.0" conf="runtime, build -> default; contrib->sources" />
 		<dependency org="org.ow2.asm" name="asm-tree" rev="4.0" conf="runtime, build->default; contrib->sources" />
 		<dependency org="org.ow2.asm" name="asm-commons" rev="4.0" conf="runtime, build->default; contrib->sources" />
-		<dependency org="net.java.dev.jna" name="jna" rev="3.2.2" conf="runtime, build->master" />
+		<dependency org="net.java.dev.jna" name="jna" rev="3.2.2" conf="runtimeInjector, build->master" />
 	</dependencies>
 </ivy-module>

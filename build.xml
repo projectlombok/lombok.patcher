@@ -52,6 +52,12 @@
 		</fileset>
 	</path>
 	
+	<path id="runtimeInjector.path">
+		<fileset dir="lib/runtimeInjector">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+	
 	<path id="test.path">
 		<fileset dir="lib/test">
 			<include name="*.jar" />
@@ -88,9 +94,12 @@
 		<echo level="info">Lombok patcher version: ${lombok.patcher.version}</echo>
 	</target>
 	
-	<target name="unpackLibs" depends="ensureRuntimeDeps" unless="pointless">
+	<target name="unpackLibs" depends="ensureRuntimeDeps, ensureRuntimeInjectorDeps" unless="pointless">
 		<unjar dest="build/pack">
 			<path refid="runtime.path" />
+		</unjar>
+		<unjar dest="build/packInjector">
+			<path refid="runtimeInjector.path" />
 		</unjar>
 	</target>
 	
@@ -139,6 +148,10 @@
 	<target name="dist" depends="-pointlessCheck, -test.quiet, -test, version, compile" unless="pointless" description="Creates the distributable">
 		<mkdir dir="dist" />
 		<jar basedir="build/pack" destfile="dist/lombok.patcher-${lombok.patcher.version}.jar" />
+		<jar destfile="dist/lombok.injector-${lombok.patcher.version}.jar">
+			<fileset dir="build/pack" />
+			<fileset dir="build/packInjector" />
+		</jar>
 		<copy file="dist/lombok.patcher-${lombok.patcher.version}.jar" tofile="dist/lombok.patcher.jar" />
 	</target>
 	
@@ -155,6 +168,11 @@
 	
 	<target name="ensureRuntimeDeps" depends="config-ivy">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="runtime" />
+		<ivy:retrieve />
+	</target>
+	
+	<target name="ensureRuntimeInjectorDeps" depends="config-ivy">
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="runtimeInjector" />
 		<ivy:retrieve />
 	</target>
 	
@@ -199,7 +217,6 @@
 			<export org="org.ow2.asm" name="asm" />
 			<export org="org.ow2.asm" name="asm-tree" />
 			<export org="org.ow2.asm" name="asm-commons" />
-			<export org="net.java.dev.jna" name="jna" />
 			<settings>
 				<url url="http://projectlombok.org/downloads/lombok.eclipse.settings" />
 			</settings>

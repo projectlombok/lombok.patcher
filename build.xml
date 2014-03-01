@@ -78,7 +78,7 @@
 	
 	<target name="version" depends="ensure-ipp" description="Shows the version number.">
 		<mkdir dir="build/pack" />
-		<javac srcdir="src" debug="on" destdir="build/pack" target="1.5" source="1.5" includes="lombok/patcher/Version.java" />
+		<javac srcdir="src/patcher" debug="on" destdir="build/pack" target="1.5" source="1.5" includes="lombok/patcher/Version.java" />
 		<java
 			classname="lombok.patcher.Version"
 			classpath="build/pack"
@@ -95,7 +95,9 @@
 	</target>
 	
 	<target name="compile" depends="unpackLibs, ensureBuildDeps" description="Compiles lombok.patcher" unless="pointless">
-		<ivy:compile srcdir="src" destdir="build/pack" target="1.5" source="1.5">
+		<ivy:compile destdir="build/pack" target="1.5" source="1.5">
+			<src path="src/patcher" />
+			<src path="src/injector" />
 			<classpath refid="build.path" />
 		</ivy:compile>
 	</target>
@@ -189,7 +191,8 @@
 	
 	<target name="eclipse" depends="deps, contrib" description="Creates eclipse project files and downloads all dependencies. Open this directory as project in eclipse after running this target.">
 		<ivy:eclipsegen source="1.5">
-			<srcdir dir="src" />
+			<srcdir dir="src/patcher" />
+			<srcdir dir="src/injector" />
 			<srcdir dir="test" />
 			<conf name="build" sources="contrib" />
 			<conf name="test" sources="contrib" />

@@ -72,6 +72,11 @@
 	
 	<target name="clean" description="Deletes build artefacts.">
 		<delete dir="build" quiet="true" />
+		<delete dir="lib/runtime" quiet="true" />
+		<delete dir="lib/runtimeInjector" quiet="true" />
+		<delete dir="lib/build" quiet="true" />
+		<delete dir="lib/test" quiet="true" />
+		<delete dir="lib/contrib" quiet="true" />
 	</target>
 	
 	<target name="distclean" depends="clean" description="Deletes everything downloaded or built by this script.">

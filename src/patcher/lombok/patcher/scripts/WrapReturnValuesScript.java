@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 The Project Lombok Authors.
+ * Copyright (C) 2009-2014 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -112,7 +112,7 @@ public final class WrapReturnValuesScript extends MethodLevelPatchScript {
 			
 			if (insert) insertMethod(wrapper, mv);
 			else super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : wrapper.getClassSpec(), wrapper.getMethodName(),
-					wrapper.getMethodDescriptor());
+					wrapper.getMethodDescriptor(), false);
 			super.visitInsn(opcode);
 		}
 	}

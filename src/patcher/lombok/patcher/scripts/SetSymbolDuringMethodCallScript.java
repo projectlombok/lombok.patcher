@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 The Project Lombok Authors.
+ * Copyright (C) 2009-2014 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -64,17 +64,17 @@ public class SetSymbolDuringMethodCallScript extends MethodLevelPatchScript {
 			super(Opcodes.ASM4, mv);
 		}
 		
-		@Override public void visitMethodInsn(int opcode, String owner, String name, String desc) {
+		@Override public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
 			if (callToWrap.getClassSpec().equals(owner) &&
 					callToWrap.getMethodName().equals(name) &&
 					callToWrap.getMethodDescriptor().equals(desc)) {
-				createTryFinally(opcode, owner, name, desc);
+				createTryFinally(opcode, owner, name, desc, itf);
 			} else {
-				super.visitMethodInsn(opcode, owner, name, desc);
+				super.visitMethodInsn(opcode, owner, name, desc, itf);
 			}
 		}
 		
-		private void createTryFinally(int opcode, String owner, String name, String desc) {
+		private void createTryFinally(int opcode, String owner, String name, String desc, boolean itf) {
 			Label start = new Label();
 			Label end = new Label();
 			Label handler = new Label();
@@ -82,13 +82,13 @@ public class SetSymbolDuringMethodCallScript extends MethodLevelPatchScript {
 			mv.visitTryCatchBlock(start, end, handler, null);
 			mv.visitLabel(start);
 			mv.visitLdcInsn(symbol);
-			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "push", "(Ljava/lang/String;)V");
-			mv.visitMethodInsn(opcode, owner, name, desc);
+			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "push", "(Ljava/lang/String;)V", false);
+			mv.visitMethodInsn(opcode, owner, name, desc, itf);
 			mv.visitLabel(end);
-			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "pop", "()V");
+			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "pop", "()V", false);
 			mv.visitJumpInsn(Opcodes.GOTO, restOfMethod);
 			mv.visitLabel(handler);
-			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "pop", "()V");
+			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "pop", "()V", false);
 			mv.visitInsn(Opcodes.ATHROW);
 			mv.visitLabel(restOfMethod);
 		}

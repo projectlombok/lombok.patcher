@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 The Project Lombok Authors.
+ * Copyright (C) 2009-2014 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -84,8 +84,8 @@ public class WrapMethodCallScript extends MethodLevelPatchScript {
 			this.logistics = logistics;
 		}
 		
-		@Override public void visitMethodInsn(int opcode, String owner, String name, String desc) {
-			super.visitMethodInsn(opcode, owner, name, desc);
+		@Override public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+			super.visitMethodInsn(opcode, owner, name, desc, itf);
 			if (callToWrap.getClassSpec().equals(owner) &&
 			    callToWrap.getMethodName().equals(name) &&
 			    callToWrap.getMethodDescriptor().equals(desc)) {
@@ -100,7 +100,7 @@ public class WrapMethodCallScript extends MethodLevelPatchScript {
 				}
 				if (insert) insertMethod(wrapper, mv);
 				else super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : wrapper.getClassSpec(),
-						wrapper.getMethodName(), wrapper.getMethodDescriptor());
+						wrapper.getMethodName(), wrapper.getMethodDescriptor(), false);
 			}
 		}
 	}

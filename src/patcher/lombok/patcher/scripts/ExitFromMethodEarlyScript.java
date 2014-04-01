@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 The Project Lombok Authors.
+ * Copyright (C) 2009-2014 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -106,7 +106,7 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 			
 			if (insert) insertMethod(decisionWrapper, mv);
 			else super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : decisionWrapper.getClassSpec(),
-					decisionWrapper.getMethodName(), decisionWrapper.getMethodDescriptor());
+					decisionWrapper.getMethodName(), decisionWrapper.getMethodDescriptor(), false);
 			
 			if (insertCallOnly) {
 				super.visitCode();
@@ -135,7 +135,7 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 				}
 				if (insert) insertMethod(valueWrapper, mv);
 				else super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : valueWrapper.getClassSpec(),
-						valueWrapper.getMethodName(), valueWrapper.getMethodDescriptor());
+						valueWrapper.getMethodName(), valueWrapper.getMethodDescriptor(), false);
 				logistics.generateReturnOpcode(mv);
 			}
 			mv.visitLabel(l0);
@@ -151,7 +151,7 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 			}
 			if (insert) insertMethod(valueWrapper, mv);
 			else super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : valueWrapper.getClassSpec(),
-					valueWrapper.getMethodName(), valueWrapper.getMethodDescriptor());
+					valueWrapper.getMethodName(), valueWrapper.getMethodDescriptor(), false);
 			logistics.generateReturnOpcode(mv);
 		}
 	}

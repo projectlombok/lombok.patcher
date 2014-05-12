@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 The Project Lombok Authors.
+ * Copyright (C) 2009-2014 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -65,9 +65,18 @@ public class AddFieldScript extends PatchScript {
 	
 	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, String classSpec) {
 		return new ClassVisitor(Opcodes.ASM4, writer) {
+			private boolean alreadyAdded = false;
+			
+			@Override public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
+				if (name != null && name.equals(fieldName)) alreadyAdded = true;
+				return super.visitField(access, name, desc, signature, value);
+			}
+			
 			@Override public void visitEnd() {
-				FieldVisitor fv = cv.visitField(accessFlags, fieldName, fieldType, null, value);
-				fv.visitEnd();
+				if (!alreadyAdded) {
+					FieldVisitor fv = cv.visitField(accessFlags, fieldName, fieldType, null, value);
+					fv.visitEnd();
+				}
 				super.visitEnd();
 			}
 		};

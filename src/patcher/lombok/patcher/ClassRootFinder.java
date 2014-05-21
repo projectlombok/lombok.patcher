@@ -21,15 +21,16 @@
  */
 package lombok.patcher;
 
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 
 public class ClassRootFinder {
-	private static String urlDecode(String in) {
+	private static String urlDecode(String in, boolean forceUtf8) {
 		try {
-			return URLDecoder.decode(in, Charset.defaultCharset().name());
+			return URLDecoder.decode(in, forceUtf8 ? "UTF-8" : Charset.defaultCharset().name());
 		} catch (UnsupportedEncodingException e) {
 			try {
 				return URLDecoder.decode(in, "UTF-8");
@@ -50,17 +51,20 @@ public class ClassRootFinder {
 		URL selfURL = context.getResource(name + ".class");
 		String self = selfURL.toString();
 		if (self.startsWith("file:/"))  {
-			self = urlDecode(self.substring(5));
+			String path = urlDecode(self.substring(5), false);
+			if (!new File(path).exists()) path = urlDecode(self.substring(5), true);
 			String suffix = "/" + context.getPackage().getName().replace('.', '/') + "/" + name + ".class";
-			if (self.endsWith(suffix)) self = self.substring(0, self.length() - suffix.length());
-			else throw new IllegalArgumentException("Unknown path structure: " + self);
+			if (path.endsWith(suffix)) path = path.substring(0, self.length() - suffix.length());
+			else throw new IllegalArgumentException("Unknown path structure: " + path);
+			self = path;
 		} else if (self.startsWith("jar:")) {
 			int sep = self.indexOf('!');
 			if (sep == -1) throw new IllegalArgumentException("No separator in jar protocol: " + self);
 			String jarLoc = self.substring(4, sep);
 			if (jarLoc.startsWith("file:/")) {
-				jarLoc = urlDecode(jarLoc.substring(5));
-				self = jarLoc;
+				String path = urlDecode(jarLoc.substring(5), false);
+				if (!new File(path).exists()) path = urlDecode(jarLoc.substring(5), true);
+				self = path;
 			} else throw new IllegalArgumentException("Unknown path structure: " + self);
 		} else {
 			throw new IllegalArgumentException("Unknown protocol: " + self);

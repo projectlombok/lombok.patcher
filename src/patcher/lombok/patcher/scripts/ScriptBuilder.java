@@ -49,7 +49,7 @@ public class ScriptBuilder {
 	
 	public static class AddFieldBuilder {
 		private int accessFlags;
-		private String targetClass;
+		private List<String> targetClasses = new ArrayList<String>();
 		private String fieldName;
 		private String fieldType;
 		private Object value;
@@ -57,14 +57,14 @@ public class ScriptBuilder {
 		private static final int NO_ACCESS_LEVELS = ~(Opcodes.ACC_PUBLIC | Opcodes.ACC_PRIVATE | Opcodes.ACC_PRIVATE);
 		
 		public AddFieldScript build() {
-			if (targetClass == null) throw new IllegalStateException("You have to set a targetClass");
+			if (targetClasses.isEmpty()) throw new IllegalStateException("You have to set at least one targetClass.");
 			if (fieldName == null) throw new IllegalStateException("You have to set a fieldName");
 			if (fieldType == null) throw new IllegalStateException("You have to set the new field's type by calling fieldType");
 			if (value != null) {
 				setStatic();
 				setFinal();
 			}
-			return new AddFieldScript(targetClass, accessFlags, fieldName, fieldType, value);
+			return new AddFieldScript(targetClasses, accessFlags, fieldName, fieldType, value);
 		}
 		
 		/**
@@ -72,7 +72,7 @@ public class ScriptBuilder {
 		 */
 		public AddFieldBuilder targetClass(String targetClass) {
 			checkTypeSyntaxDot(targetClass);
-			this.targetClass = targetClass;
+			this.targetClasses.add(targetClass);
 			return this;
 		}
 		

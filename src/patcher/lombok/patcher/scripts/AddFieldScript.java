@@ -22,7 +22,7 @@
 package lombok.patcher.scripts;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 import lombok.patcher.MethodTarget;
 import lombok.patcher.PatchScript;
@@ -37,30 +37,30 @@ import org.objectweb.asm.Opcodes;
  */
 public class AddFieldScript extends PatchScript {
 	private final int accessFlags;
-	private final String targetClass;
+	private final List<String> targetClasses;
 	private final String fieldName;
 	private final String fieldType;
 	private final Object value;
 	
 	/**
-	 * @param targetClass The class to add the field to, separated with dots (e.g. java.lang.String).
+	 * @param targetClasses The class(es) to add the field to, separated with dots (e.g. java.lang.String).
 	 * @param fieldName the name of the field to create.
 	 * @param typeSpec the type of the field, in JVM spec (e.g. [I for an int array).
 	 */
-	AddFieldScript(String targetClass, int accessFlags, String fieldName, String fieldType, Object value) {
-		if (targetClass == null) throw new NullPointerException("targetClass");
+	AddFieldScript(List<String> targetClasses, int accessFlags, String fieldName, String fieldType, Object value) {
+		if (targetClasses == null) throw new NullPointerException("targetClass");
 		if (fieldName == null) throw new NullPointerException("fieldName");
 		if (fieldType == null) throw new NullPointerException("typeSpec");
 		this.accessFlags = accessFlags;
-		this.targetClass = targetClass;
+		this.targetClasses = targetClasses;
 		this.fieldName = fieldName;
 		this.fieldType = fieldType;
 		this.value = value;
 	}
 	
 	@Override public byte[] patch(String className, byte[] byteCode) {
-		if (!MethodTarget.typeMatches(className, targetClass)) return null;
-		return runASM(byteCode, false);
+		for (String tc : targetClasses) if (MethodTarget.typeMatches(className, tc)) return runASM(byteCode, false);
+		return null;
 	}
 	
 	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, String classSpec) {
@@ -83,6 +83,6 @@ public class AddFieldScript extends PatchScript {
 	}
 	
 	@Override public Collection<String> getClassesToReload() {
-		return Collections.singleton(targetClass);
+		return targetClasses;
 	}
 }

@@ -49,7 +49,13 @@ import lombok.patcher.scripts.ScriptBuilder;
  * "Fixes" the Equinox class loader so that classes that start with a certain package prefix are loaded in such a way that
  * these classes are found from alternative locations, but can still load the classes provided by the OSGi bundle seamlessly.
  * 
- * This is black voodoo magic.
+ * The basic flow of this class is as follows:<ul>
+ * <li>The term <em>Eclipse loader</em> is used to indicate one of eclipse/equinox's own ClassLoader implementations (not this code).
+ * <li>The term <em>our loader</em> is used to indicate this class (lombok.patcher.equinox.EquinoxClassLoader</li>
+ * <li>Remember: Whichever class loader ends up calling .defineClass() is the one that will be used to load further deps that this class has!</li>
+ * <li>All <em>eclipse loaders</em> are patched so that they always just call straight into this loader. That makes the responsible loader still
+ * the <em>Eclipse loader</em> and yet all such loaders still call into <em>our loader</em> by way of patch so that we can sort out injected calls
+ * into eclipse classes that refer to lombok classes.</li>
  * 
  * To Use:<ul>
  * <li>Grab the instance via {@link #getInstance()}
@@ -63,14 +69,15 @@ import lombok.patcher.scripts.ScriptBuilder;
  * </ul>
  */
 public class EquinoxClassLoader extends ClassLoader {
-	private static final ConcurrentMap<ClassLoader, EquinoxClassLoader> hostLoaders = new ConcurrentHashMap<ClassLoader, EquinoxClassLoader>();
+	private static final ConcurrentMap<ClassLoader, EquinoxClassLoader> hostLoaders = new ConcurrentHashMap<ClassLoader, EquinoxClassLoader>(); //probably delete
 	private static final EquinoxClassLoader coreLoader = new EquinoxClassLoader();
-	private static final Method resolveMethod;
-	private static final List<String> prefixes = new ArrayList<String>();
+	private static final Method resolveMethod; //delete
+	private static final List<String> prefixes = new ArrayList<String>(); //mostly delete; it's just here for efficiency for overrideLoadDecider at this point.
 	private static final List<String> corePrefixes = new ArrayList<String>();
 	
 	private final List<File> classpath = new ArrayList<File>();
-	private final List<ClassLoader> subLoaders = new ArrayList<ClassLoader>();
+	private final List<ClassLoader> subLoaders = new ArrayList<ClassLoader>(); //delete
+	private ClassLoader wrappedLoader;
 	private final ConcurrentHashMap<String, String> cantFind = new ConcurrentHashMap<String, String>();
 	
 	static {
@@ -126,6 +133,23 @@ public class EquinoxClassLoader extends ClassLoader {
 				.decisionMethod(new Hook(SELF_NAME, "overrideLoadDecide", "boolean", "java.lang.ClassLoader", "java.lang.String", "boolean"))
 				.valueMethod(new Hook(SELF_NAME, "overrideLoadResult", "java.lang.Class", "java.lang.ClassLoader", "java.lang.String", "boolean"))
 				.request(StackRequest.THIS, StackRequest.PARAM1, StackRequest.PARAM2).build());
+		
+		manager.addScript(ScriptBuilder.addField().setPublic().setStatic()
+				.fieldType("Ljava/lang/Object;")
+				.fieldName("lombok$loader")
+				.targetClass("org.eclipse.osgi.internal.baseadaptor.DefaultClassLoader")
+				.targetClass("org.eclipse.osgi.framework.adapter.core.AbstractClassLoader")
+				.targetClass("org.eclipse.osgi.internal.loader.ModuleClassLoader")
+				.build());
+		
+		manager.addScript(ScriptBuilder.addField().setPublic().setStatic().setFinal()
+				.fieldType("Ljava/lang/String;")
+				.fieldName("lombok$location")
+				.targetClass("org.eclipse.osgi.internal.baseadaptor.DefaultClassLoader")
+				.targetClass("org.eclipse.osgi.framework.adapter.core.AbstractClassLoader")
+				.targetClass("org.eclipse.osgi.internal.loader.ModuleClassLoader")
+				.value(ClassRootFinder.findClassRootOfSelf())
+				.build());
 	}
 	
 	private void logLoadError(Throwable t) {
@@ -134,15 +158,74 @@ public class EquinoxClassLoader extends ClassLoader {
 	
 	private final ConcurrentMap<String, WeakReference<Class<?>>> defineCache = new ConcurrentHashMap<String, WeakReference<Class<?>>>();
 	
-	/*
-	 * Load order:
-	 * First, try loading from the jar/dir that hosts EquinoxClassLoader
-	 * Then, try any additional registered classpaths (jar/dir based).
-	 * If this too fails, ask the system classloader.
-	 * If the system classloader can't find it either, try loading via any registered subLoaders.
-	 * If we still haven't found it, fail.
-	 */
 	@Override protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+		/*
+		 * 1) First check if the class matches the 'core' prefix list. If yes, then load with the core loader (unless this IS the core loader, in which case, continue).
+		 * 2) If the class COULD be found, as a resource, by the classloader that we ourselves originated from, then load in the bytes and we define the class.
+		 * 3) Go back to the original classloader we just pre-empted, this time using some fancy cantFind hackery to ensure we don't preempt it again to avoid the infinite loop.
+		 *      (We do NOT need to use .getResource+.define instead of .loadClass here, because we hack into the loader. But we could...)
+		 * 4) Well, we're pretty much out of road at this point; the original loader we just pre-empted will probably ask the systemloader, but just in case it didn't, we'll try that, and then...
+		 * 5) fail.
+		 * 
+		 * To implement above:
+		 * 
+		 * * Fix SCL to do fancy voodoo with .getResource("*.class") to return .SCL.lombok resources if available.
+		 * * Kick the prefixlist to the curb.
+		 * * rewrite this method from scratch.
+		 */
+		
+		if (this != coreLoader) for (String corePrefix : corePrefixes) if (name.startsWith(corePrefix)) return coreLoader.loadClass(name, resolve);
+		
+		String binName = name.replace(".", "/") + ".class";
+		
+		for (File file : classpath) {
+			if (file.isFile()) {
+				try {
+					@Cleanup JarFile jf = new JarFile(file);
+					ZipEntry entry = jf.getEntry(binName);
+					if (entry == null) continue;
+					byte[] classData = readStream(jf.getInputStream(entry));
+					Class<?> c = defineClass(name, classData, 0, classData.length);
+					if (resolve) resolveClass(c);
+					return c;
+				} catch (IOException e) {
+					logLoadError(e);
+				}
+			} else {
+				File target = new File(file, binName);
+				if (!target.exists()) continue;
+				try {
+					byte[] classData = readStream(new FileInputStream(target));
+					Class<?> c = defineClass(name, classData, 0, classData.length);
+					if (resolve) resolveClass(c);
+					return c;
+				} catch (IOException e) {
+					logLoadError(e);
+				}
+			}
+		}
+		
+		cantFind.put(name, name);
+		
+		Class<?> c = wrappedLoader.loadClass(name);
+		if (c == null) throw new ClassNotFoundException(name);
+		
+		if (resolve) resolveClass(c);
+		return c;
+	}
+	
+	protected Class<?> oldLoadClass(String name, boolean resolve) throws ClassNotFoundException {
+		/*
+		 * Load order:
+		 * First check if the class matches the 'core' prefix list. If yes, then load with the core loader (unless this IS the core loader, in which case, continue).
+		 * Then, try loading from the jar/dir that hosts EquinoxClassLoader (i.e. our own jar). THIS IS CURRENTLY BORKEN.
+		 * Then, try any additional registered classpaths (jar/dir based). THIS IS CURRENTLY BROKEN.
+		 * If this too fails, ask the system classloader.
+		 * If the system classloader can't find it either, try loading with any registered subLoaders;
+		 *    which should normally be only the very classloader we just patched ourselves as a replacement of.
+		 *    We use a 'cantFind' cache to NOT take over this call (or it'd be an infinite loop).
+		 * If we still haven't found it, fail.
+		 */
 		boolean controlLoad = false;
 		ClassLoader resolver = resolve ? this : null;
 		Class<?> alreadyLoaded = setCached(name, null, resolver);
@@ -165,7 +248,7 @@ public class EquinoxClassLoader extends ClassLoader {
 			}
 		}
 		
-		
+		/* DEBUG NOTE: This entire for loop does absolutely nothing, because 'name' hasn't been converted from 'lombok.Getter' to 'lombok/Getter.class'. */
 		for (File file : classpath) {
 			if (file.isFile()) {
 				try {
@@ -285,7 +368,7 @@ public class EquinoxClassLoader extends ClassLoader {
 		EquinoxClassLoader ecl = hostLoaders.get(original);
 		if (ecl != null) return ecl;
 		ecl = new EquinoxClassLoader();
-		ecl.addSubLoader(original);
+		ecl.wrappedLoader = original;
 		hostLoaders.putIfAbsent(original, ecl);
 		return hostLoaders.get(original);
 	}
@@ -298,18 +381,41 @@ public class EquinoxClassLoader extends ClassLoader {
 	 * @param resolve Parameter must be there for patching.
 	 */
 	public static boolean overrideLoadDecide(ClassLoader original, String name, boolean resolve) {
-		EquinoxClassLoader hostLoader = getHostLoader(original);
-		if (hostLoader.cantFind.containsKey(name)) return false;
-		for (String prefix : prefixes) {
-			if (name.startsWith(prefix)) return true;
+		if (Boolean.TRUE) return false;
+		try {
+			Method loadDecide = (Method) original.getClass().getDeclaredField("lombok$loadDecide").get(null);
+			if (loadDecide == null) {
+				Method m = ClassLoader.class.getDeclaredMethod("defineClass", String.class, byte[].class, int.class, int.class);
+				m.setAccessible(true);
+				String jarLoc = (String) original.getClass().getDeclaredField("lombok$location").get(null);
+				@SuppressWarnings("resource") JarFile jf = new JarFile(jarLoc);
+				ZipEntry entry = jf.getEntry("lombok/patcher/equinox/EquinoxClassLoader.class");
+				if (entry == null) entry = jf.getEntry("lombok/patcher/equinox/EquinoxClassLoader.SCL.lombok");
+				InputStream in = jf.getInputStream(entry);
+				byte[] bytes = new byte[65536];
+				int r = in.read(bytes);
+				in.close();
+				Class<?> c = (Class<?>) m.invoke(original, "lombok.patcher.equinox.EquinoxClassLoader", bytes, 0, r);
+				loadDecide = c.getDeclaredMethod("overrideLoadDecide", ClassLoader.class, String.class, boolean.class);
+				loadDecide.setAccessible(true);
+				original.getClass().getDeclaredField("lombok$loadDecide").set(null, loadDecide);
+			}
+			
+			loadDecide.invoke(null, original, name, resolve);
+			EquinoxClassLoader hostLoader = getHostLoader(original);
+			if (hostLoader.cantFind.containsKey(name)) return false;
+			for (String prefix : prefixes) {
+				if (name.startsWith(prefix)) return true;
+			}
+			
+			return false;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
-		
-		return false;
 	}
 	
 	public static Class<?> overrideLoadResult(ClassLoader original, String name, boolean resolve) throws ClassNotFoundException {
 		EquinoxClassLoader hostLoader = getHostLoader(original);
-		hostLoader.addSubLoader(original);
 		return hostLoader.loadClass(name, resolve);
 	}
 }

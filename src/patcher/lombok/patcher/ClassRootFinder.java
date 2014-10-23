@@ -47,16 +47,23 @@ public class ClassRootFinder {
 	public static String findClassRootOfClass(Class<?> context) {
 		String name = context.getName();
 		int idx = name.lastIndexOf('.');
-		if (idx > -1) name = name.substring(idx + 1);
+		String packageBase;
+		if (idx > -1) {
+			packageBase = name.substring(0, idx);
+			name = name.substring(idx + 1);
+		} else {
+			packageBase = "";
+		}
+		
 		URL selfURL = context.getResource(name + ".class");
 		String self = selfURL.toString();
 		if (self.startsWith("file:/"))  {
 			String path = urlDecode(self.substring(5), false);
 			if (!new File(path).exists()) path = urlDecode(self.substring(5), true);
-			String suffix = "/" + context.getPackage().getName().replace('.', '/') + "/" + name + ".class";
-			if (path.endsWith(suffix)) path = path.substring(0, self.length() - suffix.length());
-			else throw new IllegalArgumentException("Unknown path structure: " + path);
-			self = path;
+			String suffix = "/" + packageBase.replace('.', '/') + "/" + name + ".class";
+			if (!path.endsWith(suffix)) throw new IllegalArgumentException("Unknown path structure: " + path);
+			
+			self = path.substring(0, path.length() - suffix.length());
 		} else if (self.startsWith("jar:")) {
 			int sep = self.indexOf('!');
 			if (sep == -1) throw new IllegalArgumentException("No separator in jar protocol: " + self);

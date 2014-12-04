@@ -83,7 +83,9 @@ public class ScriptManager {
 		DEBUG_PATCHING = System.getProperty("lombok.patcher.patchDebugDir", null);
 	}
 	
-	private final ClassFileTransformer transformer = new ClassFileTransformer() {
+	private final OurClassFileTransformer transformer = new OurClassFileTransformer();
+	
+	private class OurClassFileTransformer implements ClassFileTransformer {
 		public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 			byte[] byteCode = classfileBuffer;
 			boolean patched = false;
@@ -106,11 +108,8 @@ public class ScriptManager {
 			}
 			if (patched && DEBUG_PATCHING != null) {
 				try {
-					File f = new File(DEBUG_PATCHING, className + ".class");
-					f.getParentFile().mkdirs();
-					FileOutputStream fos = new FileOutputStream(f);
-					fos.write(byteCode);
-					fos.close();
+					writeArray(DEBUG_PATCHING, className + ".class", byteCode);
+					writeArray(DEBUG_PATCHING, className + "_OLD.class", classfileBuffer);
 				} catch (IOException e) {
 					System.err.println("Can't log patch result.");
 					e.printStackTrace();
@@ -118,8 +117,15 @@ public class ScriptManager {
 			}
 			return patched ? byteCode : null;
 		}
+		
+		private void writeArray(String dir, String fileName, byte[] bytes) throws IOException {
+			File f = new File(dir, fileName);
+			f.getParentFile().mkdirs();
+			FileOutputStream fos = new FileOutputStream(f);
+			fos.write(bytes);
+			fos.close();
+		}
 	};
-	
 	
 	private static boolean classpathContains(String property, String path) {
 		String pathCanonical = new File(path).getAbsolutePath();

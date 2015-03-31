@@ -30,6 +30,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
+import lombok.patcher.TransplantMapper;
+
 import org.junit.Test;
 
 public class TestAddFieldScript {
@@ -40,7 +42,7 @@ public class TestAddFieldScript {
 		byte[] posttransform = ScriptBuilder.addField()
 		.targetClass("lombok.patcher.scripts.TestAddFieldScriptEx1")
 		.setProtected().setStatic().fieldName("$test").fieldType("I").build()
-		.patch("lombok/patcher/scripts/TestAddFieldScriptEx1", pretransform);
+		.patch("lombok/patcher/scripts/TestAddFieldScriptEx1", pretransform, TransplantMapper.IDENTITY_MAPPER);
 		Class<?> ex1 = loadRaw("lombok.patcher.scripts.TestAddFieldScriptEx1", posttransform);
 		Method checkMethod = ex1.getMethod("check", String.class, int.class);
 		checkMethod.setAccessible(true);

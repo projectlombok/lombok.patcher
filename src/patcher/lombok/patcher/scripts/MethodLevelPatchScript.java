@@ -28,6 +28,7 @@ import java.util.Set;
 
 import lombok.patcher.PatchScript;
 import lombok.patcher.TargetMatcher;
+import lombok.patcher.TransplantMapper;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -47,16 +48,16 @@ public abstract class MethodLevelPatchScript extends PatchScript {
 		return affectedClasses;
 	}
 	
-	@Override public byte[] patch(String className, byte[] byteCode) {
+	@Override public byte[] patch(String className, byte[] byteCode, TransplantMapper transplantMapper) {
 		if (!classMatches(className, affectedClasses)) return null;
-		return runASM(byteCode, true);
+		return runASM(byteCode, true, transplantMapper);
 	}
 	
-	@Override protected final ClassVisitor createClassVisitor(ClassWriter writer, final String classSpec) {
-		MethodPatcher patcher = createPatcher(writer, classSpec);
+	@Override protected final ClassVisitor createClassVisitor(ClassWriter writer, final String classSpec, TransplantMapper transplantMapper) {
+		MethodPatcher patcher = createPatcher(writer, classSpec, transplantMapper);
 		for (TargetMatcher matcher : matchers) patcher.addTargetMatcher(matcher);
 		return patcher;
 	}
 	
-	protected abstract MethodPatcher createPatcher(ClassWriter writer, String classSpec);
+	protected abstract MethodPatcher createPatcher(ClassWriter writer, String classSpec, TransplantMapper transplantMapper);
 }

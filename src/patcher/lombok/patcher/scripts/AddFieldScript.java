@@ -26,6 +26,7 @@ import java.util.List;
 
 import lombok.patcher.MethodTarget;
 import lombok.patcher.PatchScript;
+import lombok.patcher.TransplantMapper;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -58,12 +59,12 @@ public class AddFieldScript extends PatchScript {
 		this.value = value;
 	}
 	
-	@Override public byte[] patch(String className, byte[] byteCode) {
-		for (String tc : targetClasses) if (MethodTarget.typeMatches(className, tc)) return runASM(byteCode, false);
+	@Override public byte[] patch(String className, byte[] byteCode, TransplantMapper transplantMapper) {
+		for (String tc : targetClasses) if (MethodTarget.typeMatches(className, tc)) return runASM(byteCode, false, transplantMapper);
 		return null;
 	}
 	
-	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, String classSpec) {
+	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, String classSpec, TransplantMapper transplantMapper) {
 		return new ClassVisitor(Opcodes.ASM4, writer) {
 			private boolean alreadyAdded = false;
 			

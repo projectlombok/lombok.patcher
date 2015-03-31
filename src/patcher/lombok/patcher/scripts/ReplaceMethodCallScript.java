@@ -28,6 +28,7 @@ import lombok.patcher.Hook;
 import lombok.patcher.MethodLogistics;
 import lombok.patcher.StackRequest;
 import lombok.patcher.TargetMatcher;
+import lombok.patcher.TransplantMapper;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
@@ -56,8 +57,8 @@ public class ReplaceMethodCallScript extends MethodLevelPatchScript {
 		this.extraRequests = extraRequests;
 	}
 	
-	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec) {
-		final MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
+	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec, TransplantMapper transplantMapper) {
+		final MethodPatcher patcher = new MethodPatcher(writer, transplantMapper, new MethodPatcherFactory() {
 			public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
 				return new ReplaceMethodCall(parent, classSpec, logistics);
 			}

@@ -41,7 +41,6 @@ import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.commons.JSRInlinerAdapter;
 
 /**
  * Represents a patch script. Contains a convenience method to run ASM on the class you want to transform.
@@ -74,7 +73,7 @@ public abstract class PatchScript {
 	/**
 	 * Transforms the class. You may return {@code null} if you have no interest in transforming this particular class.
 	 */
-	public abstract byte[] patch(String className, byte[] byteCode);
+	public abstract byte[] patch(String className, byte[] byteCode, TransplantMapper mapper);
 	
 	private static class FixedClassWriter extends ClassWriter {
 		FixedClassWriter(ClassReader classReader, int flags) {
@@ -85,9 +84,14 @@ public abstract class PatchScript {
 		@Override protected String getCommonSuperClass(String type1, String type2) {
 			//By default, ASM will attempt to live-load the class types, which will fail if meddling with classes in an
 			//environment with custom classloaders, such as Equinox. It's just an optimization; returning Object is always legal.
+			
+			// This code is only called for class files <50 (java 1.5 and below), where we turn on COMPUTE_FRAMES, which causes this code to be run.
+			// We don't quite understand how ASM works here; you don't need frames at 49 or less, so why is COMPUTE_FRAMES shorthand at that point for
+			// "don't crash right out of the gates?" Dunno. At any rate, returning Object here doesn't seem to break anything even though it's obviously wrong.
+			
 			try {
 				return super.getCommonSuperClass(type1, type2);
-			} catch (Exception e) {
+			} catch (Throwable t) {
 				return "java/lang/Object";
 			}
 		}
@@ -97,27 +101,16 @@ public abstract class PatchScript {
 	 * Runs ASM on the provider byteCode, chaining a reader to a writer and using the {@code ClassVisitor} you yourself provide
 	 * via the {@see #createClassVisitor(ClassWriter)} method as the filter.
 	 */
-	protected byte[] runASM(byte[] byteCode, boolean computeFrames) {
-		byte[] fixedByteCode = fixJSRInlining(byteCode);
-		
-		ClassReader reader = new ClassReader(fixedByteCode);
-		ClassWriter writer = new FixedClassWriter(reader, computeFrames ? ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES : 0);
-		
-		ClassVisitor visitor = createClassVisitor(writer, reader.getClassName());
-		reader.accept(visitor, 0);
-		return writer.toByteArray();
-	}
-	
-	protected byte[] fixJSRInlining(byte[] byteCode) {
+	protected byte[] runASM(byte[] byteCode, boolean computeStacks, TransplantMapper transplantMapper) {
 		ClassReader reader = new ClassReader(byteCode);
-		ClassWriter writer = new FixedClassWriter(reader, 0);
+		int classFileFormatVersion = 48;
+		if (byteCode.length > 7) classFileFormatVersion = byteCode[7] & 0xFF;
 		
-		ClassVisitor visitor = new ClassVisitor(Opcodes.ASM4, writer) {
-			@Override public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-				return new JSRInlinerAdapter(super.visitMethod(access, name, desc, signature, exceptions), access, name, desc, signature, exceptions);
-			}
-		};
+		int flags = classFileFormatVersion < 50 ? ClassWriter.COMPUTE_FRAMES : 0;
+		if (computeStacks) flags |= ClassWriter.COMPUTE_MAXS;
+		ClassWriter writer = new FixedClassWriter(reader, flags);
 		
+		ClassVisitor visitor = createClassVisitor(writer, reader.getClassName(), transplantMapper);
 		reader.accept(visitor, 0);
 		return writer.toByteArray();
 	}
@@ -128,7 +121,7 @@ public abstract class PatchScript {
 	 * @param writer The parent writer.
 	 * @param classSpec The name of the class you need to make a visitor for.
 	 */
-	protected ClassVisitor createClassVisitor(ClassWriter writer, String classSpec) {
+	protected ClassVisitor createClassVisitor(ClassWriter writer, String classSpec, TransplantMapper transplantMapper) {
 		throw new IllegalStateException("If you're going to call runASM, then you need to implement createClassVisitor");
 	}
 	
@@ -196,8 +189,8 @@ public abstract class PatchScript {
 		reader.accept(methodFinder, 0);
 	}
 	
-	protected static void transplantMethod(final Hook methodToTransplant, final ClassVisitor target) {
-		byte[] classData = readStream("/" + methodToTransplant.getClassSpec() + ".class");
+	protected static void transplantMethod(final String prefix, final Hook methodToTransplant, final ClassVisitor target) {
+		byte[] classData = readStream("/" + prefix + methodToTransplant.getClassSpec() + ".class");
 		
 		ClassReader reader = new ClassReader(classData);
 		ClassVisitor methodFinder = new NoopClassVisitor() {
@@ -246,10 +239,13 @@ public abstract class PatchScript {
 		private @Getter String ownClassSpec;
 		private final MethodPatcherFactory factory;
 		private List<Hook> transplants = new ArrayList<Hook>();
+		private final TransplantMapper transplantMapper;
+		private int classFileFormatVersion;
 		
-		public MethodPatcher(ClassVisitor cv, MethodPatcherFactory factory) {
+		public MethodPatcher(ClassVisitor cv, TransplantMapper transplantMapper, MethodPatcherFactory factory) {
 			super(Opcodes.ASM4, cv);
 			this.factory = factory;
+			this.transplantMapper = transplantMapper;
 		}
 		
 		/**
@@ -261,6 +257,7 @@ public abstract class PatchScript {
 		
 		@Override public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
 			this.ownClassSpec = name;
+			this.classFileFormatVersion = version;
 			super.visit(version, access, name, signature, superName, interfaces);
 		}
 		
@@ -271,7 +268,8 @@ public abstract class PatchScript {
 		
 		@Override public void visitEnd() {
 			for (Hook transplant : transplants) {
-				transplantMethod(transplant, cv);
+				String prefix = transplantMapper.getPrefixFor(classFileFormatVersion);
+				transplantMethod(prefix, transplant, cv);
 			}
 		}
 		

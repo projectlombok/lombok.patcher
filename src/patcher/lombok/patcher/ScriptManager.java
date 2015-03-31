@@ -38,6 +38,7 @@ import java.util.jar.JarFile;
 
 public class ScriptManager {
 	private final List<PatchScript> scripts = new ArrayList<PatchScript>();
+	private TransplantMapper transplantMapper = TransplantMapper.IDENTITY_MAPPER;
 	
 	public void addScript(PatchScript script) {
 		scripts.add(script);
@@ -94,7 +95,7 @@ public class ScriptManager {
 			for (PatchScript script : scripts) {
 				byte[] transformed = null;
 				try {
-					transformed = script.patch(className, byteCode);
+					transformed = script.patch(className, byteCode, transplantMapper);
 				} catch (Throwable t) {
 					//Exceptions get silently swallowed by instrumentation, so this is a slight improvement.
 					System.err.printf("Transformer %s failed on %s. Trace:\n", script.getPatchScriptName(), className);
@@ -200,5 +201,9 @@ public class ScriptManager {
 			if (cause instanceof RuntimeException) throw (RuntimeException)cause;
 			throw new IllegalArgumentException("Unknown issue: " + cause, cause);
 		}
+	}
+	
+	public void setTransplantMapper(TransplantMapper transplantMapper) {
+		this.transplantMapper = transplantMapper == null ? TransplantMapper.IDENTITY_MAPPER : transplantMapper;
 	}
 }

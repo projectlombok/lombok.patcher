@@ -32,6 +32,7 @@ import java.lang.reflect.Method;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodTarget;
 import lombok.patcher.StackRequest;
+import lombok.patcher.TransplantMapper;
 
 import org.junit.Test;
 
@@ -45,7 +46,7 @@ public class TestExitFromMethodEarlyScript {
 				.decisionMethod(new Hook("lombok.patcher.scripts.TestExitFromMethodEarlyScript$TestExitFromMethodEarlyScriptEx2",
 						"hook1", "boolean", "java.lang.Object", "int", "java.lang.String"))
 				.request(StackRequest.THIS, StackRequest.PARAM1, StackRequest.PARAM2).build()
-				.patch("lombok/patcher/scripts/TestExitFromMethodEarlyScriptEx1", pretransform);
+				.patch("lombok/patcher/scripts/TestExitFromMethodEarlyScriptEx1", pretransform, TransplantMapper.IDENTITY_MAPPER);
 		byte[] posttransform2 = ScriptBuilder.exitEarly()
 				.target(new MethodTarget("lombok.patcher.scripts.TestExitFromMethodEarlyScriptEx1", "returnsSomething", "double"))
 				.decisionMethod(new Hook("lombok.patcher.scripts.TestExitFromMethodEarlyScript$TestExitFromMethodEarlyScriptEx2",
@@ -53,7 +54,7 @@ public class TestExitFromMethodEarlyScript {
 				.valueMethod(new Hook("lombok.patcher.scripts.TestExitFromMethodEarlyScript$TestExitFromMethodEarlyScriptEx2",
 						"hook3", "double"))
 				.transplant().build()
-				.patch("lombok/patcher/scripts/TestExitFromMethodEarlyScriptEx1", posttransform1);
+				.patch("lombok/patcher/scripts/TestExitFromMethodEarlyScriptEx1", posttransform1, TransplantMapper.IDENTITY_MAPPER);
 		
 		Class<?> ex1 = loadRaw("lombok.patcher.scripts.TestExitFromMethodEarlyScriptEx1", posttransform2);
 		Method voidMethod = ex1.getMethod("voidReturnMethod", int.class, String.class);

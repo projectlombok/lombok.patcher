@@ -31,6 +31,7 @@ import java.lang.reflect.Method;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodTarget;
 import lombok.patcher.StackRequest;
+import lombok.patcher.TransplantMapper;
 
 import org.junit.Test;
 
@@ -45,7 +46,7 @@ public class TestWrapReturnValuesScript {
 				.wrapMethod(new Hook("lombok.patcher.scripts.TestWrapReturnValuesScript$TestWrapReturnValuesScriptEx2",
 						"hook1", "int", "int", "java.lang.Object", "int", "java.lang.String[]"))
 				.transplant().request(StackRequest.THIS, StackRequest.RETURN_VALUE, StackRequest.PARAM1, StackRequest.PARAM2)
-				.build().patch("lombok/patcher/scripts/TestWrapReturnValuesScriptEx1", pretransform);
+				.build().patch("lombok/patcher/scripts/TestWrapReturnValuesScriptEx1", pretransform, TransplantMapper.IDENTITY_MAPPER);
 		Class<?> ex1 = loadRaw("lombok.patcher.scripts.TestWrapReturnValuesScriptEx1", posttransform);
 		Method fooMethod = ex1.getMethod("foo", int.class, String[].class);
 		Constructor<?> ex1Constructor = ex1.getDeclaredConstructor();

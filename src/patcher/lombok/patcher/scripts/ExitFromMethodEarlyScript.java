@@ -28,6 +28,7 @@ import lombok.patcher.Hook;
 import lombok.patcher.MethodLogistics;
 import lombok.patcher.StackRequest;
 import lombok.patcher.TargetMatcher;
+import lombok.patcher.TransplantMapper;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
@@ -58,8 +59,8 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 		assert !(insert && transplant);
 	}
 	
-	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec) {
-		MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
+	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec, TransplantMapper transplantMapper) {
+		MethodPatcher patcher = new MethodPatcher(writer, transplantMapper, new MethodPatcherFactory() {
 			public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
 				if (valueWrapper == null && !insertCallOnly && logistics.getReturnOpcode() != Opcodes.RETURN) {
 					throw new IllegalStateException("method " + name + desc + " must return something, but " +
@@ -123,8 +124,8 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 			 * }
 			 */
 			
-			Label l0 = new Label();
-			mv.visitJumpInsn(Opcodes.IFEQ, l0);
+			Label label0 = new Label();
+			mv.visitJumpInsn(Opcodes.IFEQ, label0);
 			if (logistics.getReturnOpcode() == Opcodes.RETURN) {
 				mv.visitInsn(Opcodes.RETURN);
 			} else {
@@ -138,7 +139,7 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 						valueWrapper.getMethodName(), valueWrapper.getMethodDescriptor(), false);
 				logistics.generateReturnOpcode(mv);
 			}
-			mv.visitLabel(l0);
+			mv.visitLabel(label0);
 			mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
 			super.visitCode();
 		}

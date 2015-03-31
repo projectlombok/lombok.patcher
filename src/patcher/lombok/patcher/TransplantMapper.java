@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2014 The Project Lombok Authors.
+ * Copyright (C) 2015 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,27 +22,21 @@
 package lombok.patcher;
 
 /**
- * This class just holds lombok.patcher's current version.
+ * If you are transplanting code into classes which could have varying class file numbers, you probably need to supply at least 2 variants of the exact same class file
+ * containing the same code; for example, pre 1.5 you can't use generics at all, and starting with 1.6 you need frame info.
  */
-public class Version {
-	// ** CAREFUL ** - this class must always compile with 0 dependencies (it must not refer to any other sources or libraries).
-	private static final String VERSION = "0.18";
-	
-	private Version() {
-		//Prevent instantiation
-	}
-	
+public interface TransplantMapper {
 	/**
-	 * Prints the version followed by a newline, and exits.
+	 * By default, a transplant call will take the class of the 'hook' verbatim, but you can specify an alternate root.
+	 * 
+	 * For example, if the hook is from class com.foo.bar.Baz, then by default, the file "/com/foo/bar/Baz.class" is read. However,
+	 * if you return "Class50/" here, the file "/Class50/com/foo/bar/Baz.class" is used. Do not return null; return "" if no prefix is needed.
 	 */
-	public static void main(String[] args) {
-		System.out.println(VERSION);
-	}
+	String getPrefixFor(int classFileFormatVersion);
 	
-	/**
-	 * Get the current lombok.patcher version.
-	 */
-	public static String getVersion() {
-		return VERSION;
-	}
+	public static final TransplantMapper IDENTITY_MAPPER = new TransplantMapper() {
+		public String getPrefixFor(int classFileFormatVersion) {
+			return "";
+		}
+	};
 }

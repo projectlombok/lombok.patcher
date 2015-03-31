@@ -32,6 +32,7 @@ import java.lang.reflect.Method;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodTarget;
 import lombok.patcher.Symbols;
+import lombok.patcher.TransplantMapper;
 
 import org.junit.Test;
 
@@ -43,7 +44,7 @@ public class TestSymbols {
 		byte[] posttransform = ScriptBuilder.setSymbolDuringMethodCall()
 				.target(new MethodTarget("lombok.patcher.scripts.TestSymbolsEx1", "aMethod"))
 				.callToWrap(new Hook("lombok.patcher.scripts.TestSymbolsEx1", "bMethod", "void"))
-				.symbol("Foobar").build().patch("lombok/patcher/scripts/TestSymbolsEx1", pretransform);
+				.symbol("Foobar").build().patch("lombok/patcher/scripts/TestSymbolsEx1", pretransform, TransplantMapper.IDENTITY_MAPPER);
 		
 		Class<?> ex1 = loadRaw("lombok.patcher.scripts.TestSymbolsEx1", posttransform);
 		Method aMethod = ex1.getMethod("aMethod");

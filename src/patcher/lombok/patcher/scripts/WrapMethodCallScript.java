@@ -29,6 +29,7 @@ import lombok.patcher.MethodLogistics;
 import lombok.patcher.MethodTarget;
 import lombok.patcher.StackRequest;
 import lombok.patcher.TargetMatcher;
+import lombok.patcher.TransplantMapper;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
@@ -62,10 +63,10 @@ public class WrapMethodCallScript extends MethodLevelPatchScript {
 		this.extraRequests = extraRequests;
 	}
 	
-	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec) {
-		final MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
+	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec, TransplantMapper transplantMapper) {
+		final MethodPatcher patcher = new MethodPatcher(writer, transplantMapper, new MethodPatcherFactory() {
 			public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
-				return new ReplaceMethodCall(parent, classSpec, logistics);
+				return new WrapMethodCall(parent, classSpec, logistics);
 			}
 		});
 		
@@ -74,11 +75,11 @@ public class WrapMethodCallScript extends MethodLevelPatchScript {
 		return patcher;
 	}
 	
-	private class ReplaceMethodCall extends MethodVisitor {
+	private class WrapMethodCall extends MethodVisitor {
 		private final String ownClassSpec;
 		private final MethodLogistics logistics;
 		
-		public ReplaceMethodCall(MethodVisitor mv, String ownClassSpec, MethodLogistics logistics) {
+		public WrapMethodCall(MethodVisitor mv, String ownClassSpec, MethodLogistics logistics) {
 			super(Opcodes.ASM4, mv);
 			this.ownClassSpec = ownClassSpec;
 			this.logistics = logistics;

@@ -46,7 +46,6 @@ public class MethodLogistics {
 	private final int returnSize;
 	
 	private final List<Integer> loadOpcodes;
-	@SuppressWarnings("unused")
 	private final List<Integer> paramSizes;
 	private final List<Integer> paramIndices;
 	
@@ -89,6 +88,10 @@ public class MethodLogistics {
 	 */
 	public boolean isStatic() {
 		return staticOffset == 0;
+	}
+	
+	public int getParamCount() {
+		return this.paramSizes.size();
 	}
 	
 	/**

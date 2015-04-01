@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2014 The Project Lombok Authors.
+ * Copyright (C) 2009-2015 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,12 +21,15 @@
  */
 package lombok.patcher.scripts;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import lombok.patcher.Hook;
 import lombok.patcher.MethodLogistics;
 import lombok.patcher.TargetMatcher;
+import lombok.patcher.TransplantMapper;
 
+import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -49,48 +52,91 @@ public class SetSymbolDuringMethodCallScript extends MethodLevelPatchScript {
 		this.symbol = symbol;
 	}
 	
-	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec) {
-		final MethodPatcher patcher = new MethodPatcher(writer, new MethodPatcherFactory() {
+	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec, TransplantMapper transplantMapper) {
+		final List<WrapperMethodDescriptor> descriptors = new ArrayList<WrapperMethodDescriptor>();
+		
+		final MethodPatcher patcher = new MethodPatcher(writer, transplantMapper, new MethodPatcherFactory() {
 			public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
-				return new WrapWithSymbol(parent);
+				return new WrapWithSymbol(parent, classSpec, descriptors);
 			}
-		});
+		}) {
+			@Override public void visitEnd() {
+				for (WrapperMethodDescriptor wmd : descriptors) {
+					makeWrapperMethod(this, wmd);
+				}
+				super.visitEnd();
+			}
+		};
 		
 		return patcher;
 	}
 	
+	private void makeWrapperMethod(ClassVisitor cv, WrapperMethodDescriptor wmd) {
+		MethodVisitor mv = cv.visitMethod(Opcodes.ACC_SYNTHETIC | Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, wmd.getWrapperName(), wmd.getWrapperDescriptor(), null, null);
+		
+		MethodLogistics logistics = new MethodLogistics(Opcodes.ACC_STATIC, wmd.getWrapperDescriptor());
+		
+		mv.visitCode();
+		Label start = new Label();
+		Label end = new Label();
+		Label handler = new Label();
+		mv.visitTryCatchBlock(start, end, handler, null);
+		mv.visitLabel(start);
+		mv.visitLdcInsn(symbol);
+		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "push", "(Ljava/lang/String;)V", false);
+		for (int i = 0; i < logistics.getParamCount(); i++) {
+			logistics.generateLoadOpcodeForParam(i, mv);
+		}
+		mv.visitMethodInsn(wmd.getOpcode(), wmd.getOwner(), wmd.getName(), wmd.getTargetDescriptor(), wmd.isItf());
+		mv.visitLabel(end);
+		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "pop", "()V", false);
+		logistics.generateReturnOpcode(mv);
+		mv.visitLabel(handler);
+		mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "pop", "()V", false);
+		mv.visitInsn(Opcodes.ATHROW);
+		mv.visitMaxs(Math.max(1, logistics.getParamCount()), logistics.getParamCount());
+		mv.visitEnd();
+	}
+	
 	private class WrapWithSymbol extends MethodVisitor {
-		public WrapWithSymbol(MethodVisitor mv) {
+		private final String selfName;
+		private final List<WrapperMethodDescriptor> descriptors;
+		
+		public WrapWithSymbol(MethodVisitor mv, String selfName, List<WrapperMethodDescriptor> descriptors) {
 			super(Opcodes.ASM4, mv);
+			this.selfName = selfName;
+			this.descriptors = descriptors;
 		}
 		
 		@Override public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-			if (callToWrap.getClassSpec().equals(owner) &&
-					callToWrap.getMethodName().equals(name) &&
-					callToWrap.getMethodDescriptor().equals(desc)) {
-				createTryFinally(opcode, owner, name, desc, itf);
-			} else {
+			boolean addOwner;
+			if (opcode == Opcodes.INVOKEINTERFACE || opcode == Opcodes.INVOKEVIRTUAL) addOwner = true;
+			else if (opcode == Opcodes.INVOKESTATIC) addOwner = false;
+			else {
 				super.visitMethodInsn(opcode, owner, name, desc, itf);
+				return;
 			}
-		}
-		
-		private void createTryFinally(int opcode, String owner, String name, String desc, boolean itf) {
-			Label start = new Label();
-			Label end = new Label();
-			Label handler = new Label();
-			Label restOfMethod = new Label();
-			mv.visitTryCatchBlock(start, end, handler, null);
-			mv.visitLabel(start);
-			mv.visitLdcInsn(symbol);
-			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "push", "(Ljava/lang/String;)V", false);
-			mv.visitMethodInsn(opcode, owner, name, desc, itf);
-			mv.visitLabel(end);
-			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "pop", "()V", false);
-			mv.visitJumpInsn(Opcodes.GOTO, restOfMethod);
-			mv.visitLabel(handler);
-			mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "pop", "()V", false);
-			mv.visitInsn(Opcodes.ATHROW);
-			mv.visitLabel(restOfMethod);
+			
+			if (!callToWrap.getClassSpec().equals(owner) ||
+					!callToWrap.getMethodName().equals(name) ||
+					!callToWrap.getMethodDescriptor().equals(desc)) {
+				
+				super.visitMethodInsn(opcode, owner, name, desc, itf);
+				return;
+			}
+			
+			String fixedDesc;
+			if (addOwner) {
+				fixedDesc = "(L" + selfName + ";" + desc.substring(1);
+			} else {
+				fixedDesc = desc;
+			}
+			
+			WrapperMethodDescriptor wmd = new WrapperMethodDescriptor(descriptors.size(), opcode, owner, name, fixedDesc, desc, itf);
+			
+			super.visitMethodInsn(Opcodes.INVOKESTATIC, selfName, wmd.getWrapperName(), fixedDesc, false);
+			descriptors.add(wmd);
 		}
 	}
 }

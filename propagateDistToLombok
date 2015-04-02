@@ -1,0 +1,29 @@
+#!/bin/bash
+if [ "$1" == "" ]; then
+	echo 'supply the version as first argument, such as 0.18'
+	exit 1
+fi
+
+VERSION="$1"
+
+if [ ! -d ../lombok ]; then
+	echo 'Expected ../lombok to refer to a directory containing the lombok project.'
+	exit 1
+fi
+
+if [ ! -d ../lombok/ivyCache/org.projectlombok/lombok.patcher/jars ]; then
+	echo 'Expected ivy cache to already exist at: ../lombok/ivyCache/org.proejctlombok/lombok.patcher/jars'
+	exit 1
+fi
+
+ant dist || exit 0
+
+if [ -d ../lombok/lib/runtime ]; then
+	cp dist/lombok.patcher.jar ../lombok/lib/runtime/org.projectlombok-lombok.patcher.jar
+fi
+
+if [ -d ../lombok/lib/build ]; then
+	cp dist/lombok.patcher.jar ../lombok/lib/build/org.projectlombok-lombok.patcher.jar
+fi
+
+cp dist/lombok.patcher.jar ../lombok/ivyCache/org.projectlombok/lombok.patcher/jars/lombok.patcher-$VERSION.jar

@@ -340,13 +340,14 @@ public class ScriptBuilder {
 		private List<TargetMatcher> matchers = new ArrayList<TargetMatcher>();
 		private Hook callToWrap;
 		private String symbol;
+		private boolean report;
 		
 		public SetSymbolDuringMethodCallScript build() {
 			if (matchers.isEmpty()) throw new IllegalStateException("You have to set a target method matcher");
 			if (callToWrap == null) throw new IllegalStateException("You have to set a method that needs to set the symbol during its invocation");
 			if (symbol == null) throw new IllegalStateException("You have to specify the symbol that is on the stack during callToWrap's invocation");
 			
-			return new SetSymbolDuringMethodCallScript(matchers, callToWrap, symbol);
+			return new SetSymbolDuringMethodCallScript(matchers, callToWrap, symbol, report);
 		}
 		
 		public SetSymbolDuringMethodCallBuilder target(TargetMatcher matcher) {
@@ -361,6 +362,11 @@ public class ScriptBuilder {
 		
 		public SetSymbolDuringMethodCallBuilder symbol(String symbol) {
 			this.symbol = symbol;
+			return this;
+		}
+		
+		public SetSymbolDuringMethodCallBuilder report() {
+			this.report = true;
 			return this;
 		}
 	}

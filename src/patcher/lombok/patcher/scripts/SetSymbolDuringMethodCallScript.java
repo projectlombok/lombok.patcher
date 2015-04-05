@@ -43,13 +43,15 @@ import org.objectweb.asm.Opcodes;
 public class SetSymbolDuringMethodCallScript extends MethodLevelPatchScript {
 	private final Hook callToWrap;
 	private final String symbol;
+	private final boolean report;
 	
-	SetSymbolDuringMethodCallScript(List<TargetMatcher> matchers, Hook callToWrap, String symbol) {
+	SetSymbolDuringMethodCallScript(List<TargetMatcher> matchers, Hook callToWrap, String symbol, boolean report) {
 		super(matchers);
 		if (callToWrap == null) throw new NullPointerException("callToWrap");
 		if (symbol == null) throw new NullPointerException("symbol");
 		this.callToWrap = callToWrap;
 		this.symbol = symbol;
+		this.report = report;
 	}
 	
 	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec, TransplantMapper transplantMapper) {
@@ -57,7 +59,7 @@ public class SetSymbolDuringMethodCallScript extends MethodLevelPatchScript {
 		
 		final MethodPatcher patcher = new MethodPatcher(writer, transplantMapper, new MethodPatcherFactory() {
 			public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
-				return new WrapWithSymbol(parent, classSpec, descriptors);
+				return new WrapWithSymbol(name, parent, classSpec, descriptors);
 			}
 		}) {
 			@Override public void visitEnd() {
@@ -100,12 +102,14 @@ public class SetSymbolDuringMethodCallScript extends MethodLevelPatchScript {
 	}
 	
 	private class WrapWithSymbol extends MethodVisitor {
-		private final String selfName;
+		private final String selfMethodName;
+		private final String selfTypeName;
 		private final List<WrapperMethodDescriptor> descriptors;
 		
-		public WrapWithSymbol(MethodVisitor mv, String selfName, List<WrapperMethodDescriptor> descriptors) {
+		public WrapWithSymbol(String selfMethodName, MethodVisitor mv, String selfTypeName, List<WrapperMethodDescriptor> descriptors) {
 			super(Opcodes.ASM4, mv);
-			this.selfName = selfName;
+			this.selfMethodName = selfMethodName;
+			this.selfTypeName = selfTypeName;
 			this.descriptors = descriptors;
 		}
 		
@@ -128,14 +132,15 @@ public class SetSymbolDuringMethodCallScript extends MethodLevelPatchScript {
 			
 			String fixedDesc;
 			if (addOwner) {
-				fixedDesc = "(L" + selfName + ";" + desc.substring(1);
+				fixedDesc = "(L" + selfTypeName + ";" + desc.substring(1);
 			} else {
 				fixedDesc = desc;
 			}
 			
 			WrapperMethodDescriptor wmd = new WrapperMethodDescriptor(descriptors.size(), opcode, owner, name, fixedDesc, desc, itf);
 			
-			super.visitMethodInsn(Opcodes.INVOKESTATIC, selfName, wmd.getWrapperName(), fixedDesc, false);
+			if (report) System.out.println("Changing method " + selfTypeName + "::" + selfMethodName + " wrapping call to " + owner + "::" + name + " to set symbol " + symbol);
+			super.visitMethodInsn(Opcodes.INVOKESTATIC, selfTypeName, wmd.getWrapperName(), fixedDesc, false);
 			descriptors.add(wmd);
 		}
 	}

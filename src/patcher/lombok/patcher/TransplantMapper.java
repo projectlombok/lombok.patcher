@@ -27,16 +27,16 @@ package lombok.patcher;
  */
 public interface TransplantMapper {
 	/**
-	 * By default, a transplant call will take the class of the 'hook' verbatim, but you can specify an alternate root.
+	 * By default, a transplant call will take the class of the 'hook' verbatim, but you can specify an alternate path.
 	 * 
-	 * For example, if the hook is from class com.foo.bar.Baz, then by default, the file "/com/foo/bar/Baz.class" is read. However,
-	 * if you return "Class50/" here, the file "/Class50/com/foo/bar/Baz.class" is used. Do not return null; return "" if no prefix is needed.
+	 * For example, if the hook is from class com.foo.bar.Baz, then by default, the file "com/foo/bar/Baz.class" is read. However,
+	 * if you return "Class50/com/foo/bar/Baz.class" here, the file "Class50/com/foo/bar/Baz.class" is used. Just return {@code resourceName} if no mapping is needed.
 	 */
-	String getPrefixFor(int classFileFormatVersion);
+	String mapResourceName(int classFileFormatVersion, String resourceName);
 	
 	public static final TransplantMapper IDENTITY_MAPPER = new TransplantMapper() {
-		public String getPrefixFor(int classFileFormatVersion) {
-			return "";
+		public String mapResourceName(int classFileFormatVersion, String resourceName) {
+			return resourceName;
 		}
 	};
 }

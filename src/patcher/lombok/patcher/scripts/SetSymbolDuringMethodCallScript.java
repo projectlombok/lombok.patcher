@@ -94,7 +94,7 @@ public class SetSymbolDuringMethodCallScript extends MethodLevelPatchScript {
 		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "pop", "()V", false);
 		logistics.generateReturnOpcode(mv);
 		mv.visitLabel(handler);
-		mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+		mv.visitFrame(Opcodes.F_FULL, 0, null, 1, new Object[] {"java/lang/Throwable"});
 		mv.visitMethodInsn(Opcodes.INVOKESTATIC, "lombok/patcher/Symbols", "pop", "()V", false);
 		mv.visitInsn(Opcodes.ATHROW);
 		mv.visitMaxs(Math.max(1, logistics.getParamCount()), logistics.getParamCount());
@@ -132,7 +132,7 @@ public class SetSymbolDuringMethodCallScript extends MethodLevelPatchScript {
 			
 			String fixedDesc;
 			if (addOwner) {
-				fixedDesc = "(L" + selfTypeName + ";" + desc.substring(1);
+				fixedDesc = "(L" + callToWrap.getClassSpec() + ";" + desc.substring(1);
 			} else {
 				fixedDesc = desc;
 			}

@@ -189,8 +189,8 @@ public abstract class PatchScript {
 		reader.accept(methodFinder, 0);
 	}
 	
-	protected static void transplantMethod(final String prefix, final Hook methodToTransplant, final ClassVisitor target) {
-		byte[] classData = readStream("/" + prefix + methodToTransplant.getClassSpec() + ".class");
+	protected static void transplantMethod(final String resourceName, final Hook methodToTransplant, final ClassVisitor target) {
+		byte[] classData = readStream(resourceName);
 		
 		ClassReader reader = new ClassReader(classData);
 		ClassVisitor methodFinder = new NoopClassVisitor() {
@@ -268,8 +268,8 @@ public abstract class PatchScript {
 		
 		@Override public void visitEnd() {
 			for (Hook transplant : transplants) {
-				String prefix = transplantMapper.getPrefixFor(classFileFormatVersion);
-				transplantMethod(prefix, transplant, cv);
+				String resourceName = "/" + transplantMapper.mapResourceName(classFileFormatVersion, transplant.getClassSpec() + ".class");
+				transplantMethod(resourceName, transplant, cv);
 			}
 		}
 		

@@ -8,6 +8,6 @@
 		<conf name="test" />
 	</configurations>
 	<publications>
-		<artifact conf="test" url="http://cloud.github.com/downloads/KentBeck/junit/junit-4.8.1.jar" />
+		<artifact conf="test" url="https://cloud.github.com/downloads/KentBeck/junit/junit-4.8.1.jar" />
 	</publications>
 </ivy-module>

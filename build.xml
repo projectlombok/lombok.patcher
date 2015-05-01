@@ -25,7 +25,7 @@
 	
 	<target name="download-ipp" unless="ivyplusplus.available">
 		<mkdir dir="lib" />
-		<get src="http://projectlombok.org/downloads/ivyplusplus.jar" dest="lib/ivyplusplus.jar" usetimestamp="true" />
+		<get src="https://projectlombok.org/downloads/ivyplusplus.jar" dest="lib/ivyplusplus.jar" usetimestamp="true" />
 	</target>
 	
 	<target name="load-ipp" depends="download-ipp">
@@ -34,7 +34,7 @@
 	</target>
 
 	<target name="redownload-ipp" unless="ivyplusplus.minimumAvailable">
-		<get src="http://projectlombok.org/downloads/ivyplusplus.jar" dest="lib/ivyplusplus.jar" />
+		<get src="https://projectlombok.org/downloads/ivyplusplus.jar" dest="lib/ivyplusplus.jar" />
 		<fail>A new version of ivyplusplus was required and has been downloaded. Rerun the script to continue.</fail>
 	</target>
 
@@ -210,7 +210,7 @@
 			<export org="org.ow2.asm" name="asm-tree" />
 			<export org="org.ow2.asm" name="asm-commons" />
 			<settings>
-				<url url="http://projectlombok.org/downloads/lombok.eclipse.settings" />
+				<url url="https://projectlombok.org/downloads/lombok.eclipse.settings" />
 			</settings>
 		</ivy:eclipsegen>
 	</target>

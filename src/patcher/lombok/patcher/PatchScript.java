@@ -22,7 +22,6 @@
 package lombok.patcher;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -153,7 +152,7 @@ public abstract class PatchScript {
 			}
 			
 			return baos.toByteArray();
-		} catch (IOException e) {
+		} catch (Exception e) {
 			throw new IllegalArgumentException("resource " + resourceName + " does not exist.", e);
 		}
 	}

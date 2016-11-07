@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Project Lombok Authors.
+ * Copyright (C) 2009-2016 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,9 +39,14 @@ import java.util.jar.JarFile;
 public class ScriptManager {
 	private final List<PatchScript> scripts = new ArrayList<PatchScript>();
 	private TransplantMapper transplantMapper = TransplantMapper.IDENTITY_MAPPER;
+	private Filter filter = Filter.ALWAYS;
 	
 	public void addScript(PatchScript script) {
 		scripts.add(script);
+	}
+	
+	public void setFilter(Filter filter) {
+		this.filter = filter == null ? Filter.ALWAYS : filter;
 	}
 	
 	public void registerTransformer(Instrumentation instrumentation) {
@@ -88,9 +93,12 @@ public class ScriptManager {
 	
 	private class OurClassFileTransformer implements ClassFileTransformer {
 		public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
+			if (className == null) return null;
+			
+			if (!filter.shouldTransform(loader, className, classBeingRedefined, protectionDomain, classfileBuffer)) return null;
+			
 			byte[] byteCode = classfileBuffer;
 			boolean patched = false;
-			if (className == null) return null;
 			
 			for (PatchScript script : scripts) {
 				byte[] transformed = null;

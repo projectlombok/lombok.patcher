@@ -1,6 +1,6 @@
 #!/bin/bash
 if [ "$1" == "" ]; then
-	echo 'supply the version as first argument, such as 0.18'
+	echo 'supply the version as first argument, such as 0.22'
 	exit 1
 fi
 
@@ -12,7 +12,7 @@ if [ ! -d ../lombok ]; then
 fi
 
 if [ ! -d ../lombok/ivyCache/org.projectlombok/lombok.patcher/jars ]; then
-	echo 'Expected ivy cache to already exist at: ../lombok/ivyCache/org.proejctlombok/lombok.patcher/jars'
+	echo 'Expected ivy cache to already exist at: ../lombok/ivyCache/org.projectlombok/lombok.patcher/jars'
 	exit 1
 fi
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2016 The Project Lombok Authors.
+ * Copyright (C) 2016 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,28 +21,14 @@
  */
 package lombok.patcher;
 
-/**
- * This class just holds lombok.patcher's current version.
- */
-public class Version {
-	// ** CAREFUL ** - this class must always compile with 0 dependencies (it must not refer to any other sources or libraries).
-	private static final String VERSION = "0.22";
+import java.security.ProtectionDomain;
+
+public interface Filter {
+	Filter ALWAYS = new Filter() {
+		public boolean shouldTransform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) {
+			return true;
+		}
+	};
 	
-	private Version() {
-		//Prevent instantiation
-	}
-	
-	/**
-	 * Prints the version followed by a newline, and exits.
-	 */
-	public static void main(String[] args) {
-		System.out.println(VERSION);
-	}
-	
-	/**
-	 * Get the current lombok.patcher version.
-	 */
-	public static String getVersion() {
-		return VERSION;
-	}
+	boolean shouldTransform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 The Project Lombok Authors.
+ * Copyright (C) 2009-2017 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,14 +22,12 @@
 package lombok.patcher;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-
-import lombok.Cleanup;
-import lombok.Getter;
 
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Attribute;
@@ -141,8 +139,9 @@ public abstract class PatchScript {
 	}
 	
 	private static byte[] readStream(String resourceName) {
+		InputStream wrapStream = null;
 		try {
-			@Cleanup InputStream wrapStream = PatchScript.class.getResourceAsStream(resourceName);
+			wrapStream = PatchScript.class.getResourceAsStream(resourceName);
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			byte[] b = new byte[65536];
 			while (true) {
@@ -154,6 +153,10 @@ public abstract class PatchScript {
 			return baos.toByteArray();
 		} catch (Exception e) {
 			throw new IllegalArgumentException("resource " + resourceName + " does not exist.", e);
+		} finally {
+			if (wrapStream != null) try {
+				wrapStream.close();
+			} catch (IOException ignore) {}
 		}
 	}
 	
@@ -235,7 +238,7 @@ public abstract class PatchScript {
 	 */
 	protected static class MethodPatcher extends ClassVisitor {
 		private List<TargetMatcher> targets = new ArrayList<TargetMatcher>();
-		private @Getter String ownClassSpec;
+		private String ownClassSpec;
 		private final MethodPatcherFactory factory;
 		private List<Hook> transplants = new ArrayList<Hook>();
 		private final TransplantMapper transplantMapper;
@@ -245,6 +248,10 @@ public abstract class PatchScript {
 			super(Opcodes.ASM4, cv);
 			this.factory = factory;
 			this.transplantMapper = transplantMapper;
+		}
+		
+		public String getOwnClassSpec() {
+			return ownClassSpec;
 		}
 		
 		/**

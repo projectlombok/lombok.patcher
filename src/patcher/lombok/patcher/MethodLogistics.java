@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Project Lombok Authors.
+ * Copyright (C) 2009-2017 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,8 +26,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import lombok.Getter;
-
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
@@ -40,8 +38,6 @@ import org.objectweb.asm.Opcodes;
  */
 public class MethodLogistics {
 	private final int staticOffset;
-	
-	@Getter
 	private final int returnOpcode;
 	private final int returnSize;
 	
@@ -92,6 +88,10 @@ public class MethodLogistics {
 	
 	public int getParamCount() {
 		return this.paramSizes.size();
+	}
+	
+	public int getReturnOpcode() {
+		return returnOpcode;
 	}
 	
 	/**

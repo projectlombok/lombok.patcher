@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Project Lombok Authors.
+ * Copyright (C) 2009-2017 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,8 +25,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import lombok.Getter;
-
 /**
  * Various patch scripts support various method parmater signatures in your hook methods; use StackRequest values to specify
  * which parameters you want. It doesn't matter how you specify your StackRequest values; you <em>MUST</em> order your parameters
@@ -35,13 +33,16 @@ import lombok.Getter;
 public enum StackRequest {
 	RETURN_VALUE(-1), THIS(-1), PARAM1(0), PARAM2(1), PARAM3(2), PARAM4(3), PARAM5(4), PARAM6(5);
 	
-	@Getter
 	private final int paramPos;
 
 	StackRequest(int paramPos) {
 		this.paramPos = paramPos;
 	}
 	
+	public int getParamPos() {
+		return paramPos;
+	}
+	
 	public static final List<StackRequest> PARAMS_IN_ORDER = Collections.unmodifiableList(Arrays.asList(
-			PARAM1, PARAM2, PARAM3, PARAM4, PARAM5, PARAM6));
+		PARAM1, PARAM2, PARAM3, PARAM4, PARAM5, PARAM6));
 }

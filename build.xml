@@ -1,5 +1,5 @@
 <!--
-  Copyright (C) 2009-2014 The Project Lombok Authors.
+  Copyright (C) 2009-2017 The Project Lombok Authors.
   
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@
 	
 	<target name="load-ipp" depends="download-ipp">
 		<taskdef classpath="lib/ivyplusplus.jar" resource="com/zwitserloot/ivyplusplus/antlib.xml" uri="antlib:com.zwitserloot.ivyplusplus" />
-		<ivy:ensureippversion version="1.13" property="ivyplusplus.minimumAvailable" />
+		<ivy:ensureippversion version="1.22" property="ivyplusplus.minimumAvailable" />
 	</target>
 
 	<target name="redownload-ipp" unless="ivyplusplus.minimumAvailable">
@@ -89,7 +89,7 @@
 	
 	<target name="version" depends="ensure-ipp" description="Shows the version number.">
 		<mkdir dir="build/pack" />
-		<javac srcdir="src/patcher" debug="on" destdir="build/pack" target="1.5" source="1.5" includes="lombok/patcher/Version.java" />
+		<ivy:compile srcdir="src/patcher" destdir="build/pack" target="1.5" source="1.5" ecj="true" includes="lombok/patcher/Version.java" />
 		<java
 			classname="lombok.patcher.Version"
 			classpath="build/pack"
@@ -109,7 +109,7 @@
 	</target>
 	
 	<target name="compile" depends="unpackLibs, ensureBuildDeps" description="Compiles lombok.patcher" unless="pointless">
-		<ivy:compile destdir="build/pack" target="1.5" source="1.5">
+		<ivy:compile destdir="build/pack" target="1.5" source="1.5" ecj="true">
 			<src path="src/patcher" />
 			<src path="src/injector" />
 			<classpath refid="build.path" />
@@ -117,7 +117,8 @@
 	</target>
 	
 	<target name="compileTests" depends="compile, ensureTestDeps" description="Compiles the unit tests" unless="skipTests">
-		<ivy:compile srcdir="test" destdir="build/tests" target="1.5" source="1.5">
+		<ivy:compile destdir="build/tests" target="1.5" source="1.5" ecj="true">
+			<src path="test" />
 			<classpath path="build/pack" />
 			<classpath refid="test.path" />
 		</ivy:compile>
@@ -145,7 +146,6 @@
 				</fileset>
 			</batchtest>
 		</junit>
-		<echo level="info">All tests successful.</echo>
 	</target>
 	
 	<target name="test" depends="-test" description="Runs the unit tests" />

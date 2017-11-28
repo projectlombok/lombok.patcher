@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Project Lombok Authors.
+ * Copyright (C) 2009-2017 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,10 +30,6 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
-
 /**
  * Represents a target method that you want to transform.
  * 
@@ -41,23 +37,32 @@ import lombok.ToString;
  * overloaded the method name. You can choose to focus on just one of a set of overloaded methods by also specifying return
  * type and parameter types.
  */
-@ToString
-@EqualsAndHashCode
 public final class MethodTarget implements TargetMatcher {
-	@Getter
 	private final String classSpec;
-	
-	@Getter
 	private final String methodName;
-	
-	@Getter
 	private final String returnSpec;
-	
-	@Getter
 	private final List<String> parameterSpec;
-	
-	@Getter
 	private boolean hasDescription;
+	
+	public String getClassSpec() {
+		return classSpec;
+	}
+	
+	public String getMethodName() {
+		return methodName;
+	}
+	
+	public String getReturnSpec() {
+		return returnSpec;
+	}
+	
+	public List<String> getParameterSpec() {
+		return parameterSpec;
+	}
+	
+	public boolean isHasDescription() {
+		return hasDescription;
+	}
 	
 	/**
 	 * Target any method with the provided name that appears in the provided class, regardless of return type and parameter types.
@@ -215,5 +220,41 @@ public final class MethodTarget implements TargetMatcher {
 	
 	public static boolean typeMatches(String type, String pattern) {
 		return type.replace("/", ".").equals(pattern);
+	}
+	
+	@Override public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((classSpec == null) ? 0 : classSpec.hashCode());
+		result = prime * result + (hasDescription ? 1231 : 1237);
+		result = prime * result + ((methodName == null) ? 0 : methodName.hashCode());
+		result = prime * result + ((parameterSpec == null) ? 0 : parameterSpec.hashCode());
+		result = prime * result + ((returnSpec == null) ? 0 : returnSpec.hashCode());
+		return result;
+	}
+	
+	@Override public boolean equals(Object obj) {
+		if (this == obj) return true;
+		if (obj == null) return false;
+		if (getClass() != obj.getClass()) return false;
+		MethodTarget other = (MethodTarget) obj;
+		if (classSpec == null) {
+			if (other.classSpec != null) return false;
+		} else if (!classSpec.equals(other.classSpec)) return false;
+		if (hasDescription != other.hasDescription) return false;
+		if (methodName == null) {
+			if (other.methodName != null) return false;
+		} else if (!methodName.equals(other.methodName)) return false;
+		if (parameterSpec == null) {
+			if (other.parameterSpec != null) return false;
+		} else if (!parameterSpec.equals(other.parameterSpec)) return false;
+		if (returnSpec == null) {
+			if (other.returnSpec != null) return false;
+		} else if (!returnSpec.equals(other.returnSpec)) return false;
+		return true;
+	}
+	
+	@Override public String toString() {
+		return "MethodTarget[classSpec=" + classSpec + ", methodName=" + methodName + ", returnSpec=" + returnSpec + ", parameterSpec=" + parameterSpec + ", hasDescription=" + hasDescription + "]";
 	}
 }

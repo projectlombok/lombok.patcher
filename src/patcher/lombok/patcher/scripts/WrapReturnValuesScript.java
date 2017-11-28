@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2014 The Project Lombok Authors.
+ * Copyright (C) 2009-2017 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +24,6 @@ package lombok.patcher.scripts;
 import java.util.List;
 import java.util.Set;
 
-import lombok.NonNull;
-import lombok.ToString;
 import lombok.patcher.Hook;
 import lombok.patcher.MethodLogistics;
 import lombok.patcher.StackRequest;
@@ -39,9 +37,8 @@ import org.objectweb.asm.Opcodes;
 /**
  * Will find every 'return' instruction in the target method and will insert right before it a call to the wrapper.
  */
-@ToString
 public final class WrapReturnValuesScript extends MethodLevelPatchScript {
-	private final @NonNull Hook wrapper;
+	private final Hook wrapper;
 	private final Set<StackRequest> requests;
 	private final boolean hijackReturnValue;
 	private final boolean transplant, insert;
@@ -116,5 +113,9 @@ public final class WrapReturnValuesScript extends MethodLevelPatchScript {
 					wrapper.getMethodDescriptor(), false);
 			super.visitInsn(opcode);
 		}
+	}
+	
+	@Override public String toString() {
+		return "WrapReturnValues(wrapper: " + wrapper + ", hijackReturn: " + hijackReturnValue + ", transplant: " + transplant + ", insert: " + insert + ", requests: " + requests + ")";
 	}
 }

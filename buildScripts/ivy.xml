@@ -8,7 +8,7 @@
 		<conf name="contrib" />
 	</configurations>
 	<dependencies>
-		<dependency org="projectlombok.org" name="junit" rev="4.8.1" conf="test" />
+		<dependency org="junit" name="junit" rev="4.12" conf="test -> default"/>
 		<dependency org="com.jcraft" name="jsch" rev="0.1.42" conf="build->default" />
 		<dependency org="projectlombok.org" name="jsch-ant-fixed" rev="0.1.45" conf="build" />
 		<dependency org="org.ow2.asm" name="asm" rev="6.0" conf="runtime, build -> default; contrib->sources" />

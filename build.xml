@@ -106,6 +106,7 @@
 		<unjar dest="build/packInjector">
 			<path refid="runtimeInjector.path" />
 		</unjar>
+		<delete file="build/pack/module-info.class" quiet="true" />
 	</target>
 	
 	<target name="compile" depends="unpackLibs, ensureBuildDeps" description="Compiles lombok.patcher" unless="pointless">

@@ -107,7 +107,7 @@ public class SetSymbolDuringMethodCallScript extends MethodLevelPatchScript {
 		private final List<WrapperMethodDescriptor> descriptors;
 		
 		public WrapWithSymbol(String selfMethodName, MethodVisitor mv, String selfTypeName, List<WrapperMethodDescriptor> descriptors) {
-			super(Opcodes.ASM4, mv);
+			super(Opcodes.ASM6, mv);
 			this.selfMethodName = selfMethodName;
 			this.selfTypeName = selfTypeName;
 			this.descriptors = descriptors;

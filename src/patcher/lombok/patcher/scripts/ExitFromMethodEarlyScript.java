@@ -82,7 +82,7 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 		private final String ownClassSpec;
 		
 		public ExitEarly(MethodVisitor mv, MethodLogistics logistics, String ownClassSpec) {
-			super(Opcodes.ASM4, mv);
+			super(Opcodes.ASM6, mv);
 			this.logistics = logistics;
 			this.ownClassSpec = ownClassSpec;
 		}

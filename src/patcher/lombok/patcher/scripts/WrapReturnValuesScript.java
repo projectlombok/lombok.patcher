@@ -78,7 +78,7 @@ public final class WrapReturnValuesScript extends MethodLevelPatchScript {
 		private final String ownClassSpec;
 		
 		public WrapReturnValues(MethodVisitor mv, MethodLogistics logistics, String ownClassSpec) {
-			super(Opcodes.ASM4, mv);
+			super(Opcodes.ASM6, mv);
 			this.logistics = logistics;
 			this.ownClassSpec = ownClassSpec;
 		}

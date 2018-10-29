@@ -162,7 +162,7 @@ public abstract class PatchScript {
 	
 	private static abstract class NoopClassVisitor extends ClassVisitor {
 		public NoopClassVisitor() {
-			super(Opcodes.ASM6);
+			super(Opcodes.ASM7);
 		}
 		
 		public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {}
@@ -208,7 +208,7 @@ public abstract class PatchScript {
 
 	private static final class InsertBodyOfMethodIntoAnotherVisitor extends MethodVisitor {
 		private InsertBodyOfMethodIntoAnotherVisitor(MethodVisitor mv) {
-			super(Opcodes.ASM6, mv);
+			super(Opcodes.ASM7, mv);
 		}
 		
 		@Override public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) { return null; }
@@ -245,7 +245,7 @@ public abstract class PatchScript {
 		private int classFileFormatVersion;
 		
 		public MethodPatcher(ClassVisitor cv, TransplantMapper transplantMapper, MethodPatcherFactory factory) {
-			super(Opcodes.ASM6, cv);
+			super(Opcodes.ASM7, cv);
 			this.factory = factory;
 			this.transplantMapper = transplantMapper;
 		}

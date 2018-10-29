@@ -74,7 +74,7 @@ public class ReplaceMethodCallScript extends MethodLevelPatchScript {
 		private final MethodLogistics logistics;
 		
 		public ReplaceMethodCall(MethodVisitor mv, String ownClassSpec, MethodLogistics logistics) {
-			super(Opcodes.ASM6, mv);
+			super(Opcodes.ASM7, mv);
 			this.ownClassSpec = ownClassSpec;
 			this.logistics = logistics;
 		}

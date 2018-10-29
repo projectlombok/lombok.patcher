@@ -65,7 +65,7 @@ public class AddFieldScript extends PatchScript {
 	}
 	
 	@Override protected ClassVisitor createClassVisitor(ClassWriter writer, String classSpec, TransplantMapper transplantMapper) {
-		return new ClassVisitor(Opcodes.ASM6, writer) {
+		return new ClassVisitor(Opcodes.ASM7, writer) {
 			private boolean alreadyAdded = false;
 			
 			@Override public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {

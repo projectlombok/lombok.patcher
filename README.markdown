@@ -7,4 +7,4 @@ replace methods entirely with your own, or add fields.
 
 lombok.patcher also includes support for getting around the Eclipse OSGi container's classloader separation.
 
-An example can be found in [Project Lombok's eclipse agent code](http://github.com/rzwitserloot/lombok/tree/master/src/eclipseAgent/lombok/eclipse/agent/)
+An example can be found in [Project Lombok's eclipse agent code](https://github.com/rzwitserloot/lombok/tree/master/src/eclipseAgent/lombok/eclipse/agent/)

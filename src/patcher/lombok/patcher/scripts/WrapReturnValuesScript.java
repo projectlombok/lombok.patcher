@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 The Project Lombok Authors.
+ * Copyright (C) 2009-2019 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,7 @@ public final class WrapReturnValuesScript extends MethodLevelPatchScript {
 	private final Hook wrapper;
 	private final Set<StackRequest> requests;
 	private final boolean hijackReturnValue;
-	private final boolean transplant, insert;
+	private final boolean transplant, insert, cast;
 	
 	/**
 	 * @param targetMethod The target method to patch.
@@ -50,7 +50,7 @@ public final class WrapReturnValuesScript extends MethodLevelPatchScript {
 	 *   helper methods if you use this!
 	 * @param requests The kinds of parameters you want your hook method to receive.
 	 */
-	WrapReturnValuesScript(List<TargetMatcher> matchers, Hook wrapper, boolean transplant, boolean insert, Set<StackRequest> requests) {
+	WrapReturnValuesScript(List<TargetMatcher> matchers, Hook wrapper, boolean transplant, boolean insert, boolean cast, Set<StackRequest> requests) {
 		super(matchers);
 		if (wrapper == null) throw new NullPointerException("wrapper");
 		this.wrapper = wrapper;
@@ -58,13 +58,15 @@ public final class WrapReturnValuesScript extends MethodLevelPatchScript {
 		this.requests = requests;
 		this.transplant = transplant;
 		this.insert = insert;
+		this.cast = cast && hijackReturnValue;
 		assert !(insert && transplant);
+		assert !(cast && insert);
 	}
 	
 	@Override protected MethodPatcher createPatcher(ClassWriter writer, final String classSpec, TransplantMapper transplantMapper) {
 		final MethodPatcher patcher = new MethodPatcher(writer, transplantMapper, new MethodPatcherFactory() {
 			public MethodVisitor createMethodVisitor(String name, String desc, MethodVisitor parent, MethodLogistics logistics) {
-				return new WrapReturnValues(parent, logistics, classSpec);
+				return new WrapReturnValues(parent, logistics, classSpec, desc);
 			}
 		});
 		
@@ -73,14 +75,25 @@ public final class WrapReturnValuesScript extends MethodLevelPatchScript {
 		return patcher;
 	}
 	
+	private static String extractReturnValueFromDesc(String desc) {
+		int lastIdx = desc == null ? -1 : desc.lastIndexOf(')');
+		if (lastIdx == -1) return null;
+		
+		String rd = desc.substring(lastIdx + 1);
+		if (rd.startsWith("L") && rd.endsWith(";")) return rd.substring(1, rd.length() - 1);
+		return rd;
+	}
+	
 	private class WrapReturnValues extends MethodVisitor {
 		private final MethodLogistics logistics;
 		private final String ownClassSpec;
+		private final String returnValueDesc;
 		
-		public WrapReturnValues(MethodVisitor mv, MethodLogistics logistics, String ownClassSpec) {
+		public WrapReturnValues(MethodVisitor mv, MethodLogistics logistics, String ownClassSpec, String desc) {
 			super(Opcodes.ASM7, mv);
 			this.logistics = logistics;
 			this.ownClassSpec = ownClassSpec;
+			this.returnValueDesc = extractReturnValueFromDesc(desc);
 		}
 		
 		@Override public void visitInsn(int opcode) {
@@ -108,9 +121,14 @@ public final class WrapReturnValuesScript extends MethodLevelPatchScript {
 				logistics.generateLoadOpcodeForParam(param.getParamPos(), mv);
 			}
 			
-			if (insert) insertMethod(wrapper, mv);
-			else super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : wrapper.getClassSpec(), wrapper.getMethodName(),
+			if (insert) {
+				insertMethod(wrapper, mv);
+			} else {
+				super.visitMethodInsn(Opcodes.INVOKESTATIC, transplant ? ownClassSpec : wrapper.getClassSpec(), wrapper.getMethodName(),
 					wrapper.getMethodDescriptor(), false);
+			}
+			
+			if (cast) super.visitTypeInsn(Opcodes.CHECKCAST, returnValueDesc);
 			super.visitInsn(opcode);
 		}
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Project Lombok Authors.
+ * Copyright (C) 2009-2019 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -57,6 +57,26 @@ public class TestWrapReturnValuesScript {
 		assertEquals("patched return value", 20, (int)(Integer)fooMethod.invoke(ex1Constructor.newInstance(), 5, null));
 	}
 	
+	@Test
+	public void testWrapReturnWithCast() throws Exception {
+		InputStream raw = TestWrapReturnValuesScript.class.getResourceAsStream("/lombok/patcher/scripts/TestWrapReturnValuesScriptEx1.class");
+		byte[] pretransform = readFromStream(raw);
+		byte[] posttransform = ScriptBuilder.wrapReturnValue()
+			.target(new MethodTarget("lombok.patcher.scripts.TestWrapReturnValuesScriptEx1", "bar",
+				"java.lang.String[]"))
+			.wrapMethod(new Hook("lombok.patcher.scripts.TestWrapReturnValuesScript$TestWrapReturnValuesScriptEx2",
+				"hook2", "java.lang.Object", "java.lang.Object"))
+			.cast().request(StackRequest.RETURN_VALUE)
+			.build().patch("lombok/patcher/scripts/TestWrapReturnValuesScriptEx1", pretransform, TransplantMapper.IDENTITY_MAPPER);
+		Class<?> ex1 = loadRaw("lombok.patcher.scripts.TestWrapReturnValuesScriptEx1", posttransform);
+		Method barMethod = ex1.getMethod("bar");
+		Constructor<?> ex1Constructor = ex1.getDeclaredConstructor();
+		barMethod.setAccessible(true);
+		ex1Constructor.setAccessible(true);
+		
+		assertArrayEquals("patched return value", new String[] {"B"}, (String[]) barMethod.invoke(ex1Constructor.newInstance()));
+	}
+	
 	public static class TestWrapReturnValuesScriptEx2 {
 		public static int hook1(int supposedReturnValue, Object thisRef, int param1, String[] param2) {
 			assertEquals("supposedReturnValue", param1 < 10 ? 10 : 80, supposedReturnValue);
@@ -69,6 +89,13 @@ public class TestWrapReturnValuesScript {
 			
 			return supposedReturnValue *2;
 		}
+		
+		public static Object hook2(Object supposedReturnValue) {
+			assertEquals("supposedReturnValue-type", String[].class, supposedReturnValue.getClass());
+			String[] srv = (String[]) supposedReturnValue;
+			assertArrayEquals("supposedReturnValue", new String[] {"A"}, srv);
+			return new String[] {"B"};
+		}
 	}
 }
 
@@ -77,5 +104,9 @@ class TestWrapReturnValuesScriptEx1 {
 	public int foo(int x, String[] y) {
 		if (x < 10) return 10;
 		return 80;
+	}
+	
+	public String[] bar() {
+		return new String[] {"A"};
 	}
 }

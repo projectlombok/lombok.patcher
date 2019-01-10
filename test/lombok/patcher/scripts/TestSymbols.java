@@ -22,7 +22,7 @@
 package lombok.patcher.scripts;
 
 import static lombok.patcher.scripts.ScriptTestUtils.*;
-import static junit.framework.Assert.*;
+import static org.junit.Assert.*;
 
 import java.io.InputStream;
 import java.lang.reflect.Constructor;

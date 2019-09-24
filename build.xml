@@ -30,7 +30,7 @@
 	
 	<target name="load-ipp" depends="download-ipp">
 		<taskdef classpath="lib/ivyplusplus.jar" resource="com/zwitserloot/ivyplusplus/antlib.xml" uri="antlib:com.zwitserloot.ivyplusplus" />
-		<ivy:ensureippversion version="1.22" property="ivyplusplus.minimumAvailable" />
+		<ivy:ensureippversion version="1.26" property="ivyplusplus.minimumAvailable" />
 	</target>
 
 	<target name="redownload-ipp" unless="ivyplusplus.minimumAvailable">

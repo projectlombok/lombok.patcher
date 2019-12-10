@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2014 The Project Lombok Authors.
+ * Copyright (C) 2009-2019 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -95,11 +95,11 @@ public class LiveInjector {
 			throw new IllegalStateException("agent injection only works on a sun-derived 1.6 or higher VM");
 		}
 		
-		LibJVM libjvm = (LibJVM) Native.loadLibrary(LibJVM.class);
+		LibJVM libjvm = Native.load(LibJVM.class);
 		PointerByReference vms = new PointerByReference();
 		IntByReference found = new IntByReference();
 		libjvm.JNI_GetCreatedJavaVMs(vms, 1, found);
-		LibInstrument libinstrument = (LibInstrument)Native.loadLibrary(LibInstrument.class);
+		LibInstrument libinstrument = Native.load(LibInstrument.class);
 		Pointer vm = vms.getValue();
 		libinstrument.Agent_OnAttach(vm, jarFile, null);
 	}

@@ -26,4 +26,8 @@ if [ -d ../lombok/lib/build ]; then
 	cp dist/lombok.patcher.jar ../lombok/lib/build/org.projectlombok-lombok.patcher.jar
 fi
 
+if [ -d ../lombok/lib/stripe ]; then
+	cp dist/lombok.patcher.jar ../lombok/lib/stripe/org.projectlombok-lombok.patcher.jar
+fi
+
 cp dist/lombok.patcher.jar ../lombok/ivyCache/org.projectlombok/lombok.patcher/jars/lombok.patcher-$VERSION.jar

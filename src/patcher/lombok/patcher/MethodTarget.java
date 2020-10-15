@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 The Project Lombok Authors.
+ * Copyright (C) 2009-2020 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,6 +43,15 @@ public final class MethodTarget implements TargetMatcher {
 	private final String returnSpec;
 	private final List<String> parameterSpec;
 	private boolean hasDescription;
+	
+	public String describe() {
+		int sci1 = classSpec.lastIndexOf('.');
+		int sci2 = classSpec.lastIndexOf('$');
+		int sci3 = classSpec.lastIndexOf('/');
+		int sci = sci1 > sci2 ? sci1 : sci2;
+		if (sci < sci3) sci = sci3;
+		return (sci == -1 ? classSpec : classSpec.substring(sci + 1)) + ":" + methodName;
+	}
 	
 	public String getClassSpec() {
 		return classSpec;

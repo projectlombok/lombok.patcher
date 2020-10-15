@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2014 The Project Lombok Authors.
+ * Copyright (C) 2009-2020 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,6 +43,10 @@ public class AddFieldScript extends PatchScript {
 	private final String fieldType;
 	private final Object value;
 	
+	@Override public String getPatchScriptName() {
+		return "AddField: " + fieldType + " " + fieldName + "to "+ targetClasses;
+	}
+	
 	/**
 	 * @param targetClasses The class(es) to add the field to, separated with dots (e.g. java.lang.String).
 	 * @param fieldName the name of the field to create.
@@ -57,6 +61,11 @@ public class AddFieldScript extends PatchScript {
 		this.fieldName = fieldName;
 		this.fieldType = fieldType;
 		this.value = value;
+	}
+	
+	@Override public boolean wouldPatch(String className) {
+		for (String tc : targetClasses) if (MethodTarget.typeMatches(className, tc)) return true;
+		return false;
 	}
 	
 	@Override public byte[] patch(String className, byte[] byteCode, TransplantMapper transplantMapper) {

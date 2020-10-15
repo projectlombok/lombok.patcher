@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Project Lombok Authors.
+ * Copyright (C) 2009-2020 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,6 +37,15 @@ public abstract class MethodLevelPatchScript extends PatchScript {
 	private final Set<String> affectedClasses;
 	private final Collection<TargetMatcher> matchers;
 	
+	public String describeMatchers() {
+		if (matchers.size() == 0) return "(No matchers)";
+		if (matchers.size() == 1) return matchers.iterator().next().describe();
+		StringBuilder out = new StringBuilder("(");
+		for (TargetMatcher tm : matchers) out.append(tm.describe()).append(", ");
+		out.setLength(out.length() - 2);
+		return out.append(")").toString();
+	}
+	
 	public MethodLevelPatchScript(Collection<TargetMatcher> matchers) {
 		this.matchers = matchers;
 		Set<String> affected = new HashSet<String>();
@@ -46,6 +55,10 @@ public abstract class MethodLevelPatchScript extends PatchScript {
 	
 	@Override public Collection<String> getClassesToReload() {
 		return affectedClasses;
+	}
+	
+	@Override public boolean wouldPatch(String className) {
+		return classMatches(className, affectedClasses);
 	}
 	
 	@Override public byte[] patch(String className, byte[] byteCode, TransplantMapper transplantMapper) {

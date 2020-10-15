@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 The Project Lombok Authors.
+ * Copyright (C) 2009-2020 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -66,6 +66,8 @@ public abstract class PatchScript {
 		
 		return false;
 	}
+	
+	public abstract boolean wouldPatch(String className);
 	
 	/**
 	 * Transforms the class. You may return {@code null} if you have no interest in transforming this particular class.

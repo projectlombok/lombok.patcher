@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2016 The Project Lombok Authors.
+ * Copyright (C) 2009-2020 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,18 +31,57 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarFile;
 
 public class ScriptManager {
+	private static final class WitnessAction {
+		boolean triggered;
+		boolean ifWitnessRemove;
+		PatchScript script;
+	}
+	
 	private final List<PatchScript> scripts = new ArrayList<PatchScript>();
+	private final Map<String, List<WitnessAction>> witnessActions = new HashMap<String, List<WitnessAction>>(); // maps FQNs to actions
+	
 	private TransplantMapper transplantMapper = TransplantMapper.IDENTITY_MAPPER;
 	private Filter filter = Filter.ALWAYS;
 	
 	public void addScript(PatchScript script) {
 		scripts.add(script);
+	}
+	
+	public void addScriptIfWitness(String[] witness, PatchScript script) {
+		WitnessAction wa = new WitnessAction();
+		wa.ifWitnessRemove = false;
+		wa.script = script;
+		for (String w : witness) {
+			List<WitnessAction> list = witnessActions.get(w);
+			if (list == null) {
+				list = new ArrayList<WitnessAction>();
+				witnessActions.put(w, list);
+			}
+			list.add(wa);
+		}
+	}
+	
+	public void addScriptIfNotWitness(String[] witness, PatchScript script) {
+		WitnessAction wa = new WitnessAction();
+		wa.ifWitnessRemove = true;
+		wa.script = script;
+		scripts.add(script);
+		for (String w : witness) {
+			List<WitnessAction> list = witnessActions.get(w);
+			if (list == null) {
+				list = new ArrayList<WitnessAction>();
+				witnessActions.put(w, list);
+			}
+			list.add(wa);
+		}
 	}
 	
 	public void setFilter(Filter filter) {
@@ -84,7 +123,7 @@ public class ScriptManager {
 	}
 	
 	private static final String DEBUG_PATCHING;
-	
+	private static final boolean LOG_TO_STANDARD_ERR = false;
 	static {
 		DEBUG_PATCHING = System.getProperty("lombok.patcher.patchDebugDir", null);
 	}
@@ -95,7 +134,31 @@ public class ScriptManager {
 		public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 			if (className == null) return null;
 			
+			List<WitnessAction> actions = witnessActions.get(className);
+			if (actions != null) {
+				for (WitnessAction wa : actions) {
+					if (wa.triggered) continue;
+					wa.triggered = true;
+					if (wa.ifWitnessRemove) {
+						scripts.remove(wa.script);
+						if (LOG_TO_STANDARD_ERR) System.err.println("Removed script: " + wa.script.getPatchScriptName() + " because I saw " + className);
+					} else {
+						scripts.add(wa.script);
+						if (LOG_TO_STANDARD_ERR) System.err.println("Added script: " + wa.script.getPatchScriptName() + " because I saw " + className);
+					}
+				}
+			}
+			
 			if (!filter.shouldTransform(loader, className, classBeingRedefined, protectionDomain, classfileBuffer)) return null;
+			
+			if (LOG_TO_STANDARD_ERR) for (List<WitnessAction> list : witnessActions.values()) {
+				for (WitnessAction wa : list) {
+					if (wa.triggered || wa.ifWitnessRemove) continue;
+					if (wa.script.wouldPatch(className)) {
+						System.err.println("[SKIPPING] " + wa.script.getPatchScriptName());
+					}
+				}
+			}
 			
 			byte[] byteCode = classfileBuffer;
 			boolean patched = false;
@@ -103,7 +166,14 @@ public class ScriptManager {
 			for (PatchScript script : scripts) {
 				byte[] transformed = null;
 				try {
-					transformed = script.patch(className, byteCode, transplantMapper);
+					if (LOG_TO_STANDARD_ERR) {
+						if (script.wouldPatch(className)) {
+							System.err.println("[RUNNING] " + script.getPatchScriptName());
+							transformed = script.patch(className, byteCode, transplantMapper);
+						}
+					} else {
+						transformed = script.patch(className, byteCode, transplantMapper);
+					}
 				} catch (Throwable t) {
 					//Exceptions get silently swallowed by instrumentation, so this is a slight improvement.
 					System.err.printf("Transformer %s failed on %s. Trace:\n", script.getPatchScriptName(), className);

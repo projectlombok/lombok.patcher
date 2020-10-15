@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2014 The Project Lombok Authors.
+ * Copyright (C) 2009-2020 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +44,11 @@ public class ReplaceMethodCallScript extends MethodLevelPatchScript {
 	private final Hook methodToReplace;
 	private final boolean transplant, insert;
 	private final Set<StackRequest> extraRequests;
-
+	
+	@Override public String getPatchScriptName() {
+		return "replace " + methodToReplace.getMethodName() + " with " + wrapper.getMethodName() + " in " + describeMatchers();
+	}
+	
 	ReplaceMethodCallScript(List<TargetMatcher> matchers, Hook callToReplace, Hook wrapper, boolean transplant, boolean insert, Set<StackRequest> extraRequests) {
 		super(matchers);
 		if (callToReplace == null) throw new NullPointerException("callToReplace");

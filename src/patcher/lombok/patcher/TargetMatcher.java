@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 The Project Lombok Authors.
+ * Copyright (C) 2009-2020 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,4 +39,5 @@ public interface TargetMatcher {
 	 */
 	public abstract boolean matches(String classSpec, String methodName, String descriptor);
 	
+	public abstract String describe();
 }

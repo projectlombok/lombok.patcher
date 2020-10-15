@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2015 The Project Lombok Authors.
+ * Copyright (C) 2009-2020 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,6 +44,10 @@ public class SetSymbolDuringMethodCallScript extends MethodLevelPatchScript {
 	private final Hook callToWrap;
 	private final String symbol;
 	private final boolean report;
+	
+	@Override public String getPatchScriptName() {
+		return "set symbol " + symbol + " if " + callToWrap.getMethodName() + " is invoked in " + describeMatchers();
+	}
 	
 	SetSymbolDuringMethodCallScript(List<TargetMatcher> matchers, Hook callToWrap, String symbol, boolean report) {
 		super(matchers);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2014 The Project Lombok Authors.
+ * Copyright (C) 2009-2020 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,6 +49,10 @@ public class WrapMethodCallScript extends MethodLevelPatchScript {
 	private final boolean transplant, insert;
 	private final boolean leaveReturnValueIntact;
 	private final Set<StackRequest> extraRequests;
+	
+	@Override public String getPatchScriptName() {
+		return "wrap " + callToWrap.getMethodName() + " with " + wrapper.getMethodName() + " in " + describeMatchers();
+	}
 	
 	WrapMethodCallScript(List<TargetMatcher> matchers, Hook callToWrap, Hook wrapper, boolean transplant, boolean insert, Set<StackRequest> extraRequests) {
 		super(matchers);

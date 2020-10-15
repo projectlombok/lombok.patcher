@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 The Project Lombok Authors.
+ * Copyright (C) 2009-2020 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,6 +42,10 @@ public final class WrapReturnValuesScript extends MethodLevelPatchScript {
 	private final Set<StackRequest> requests;
 	private final boolean hijackReturnValue;
 	private final boolean transplant, insert, cast;
+	
+	@Override public String getPatchScriptName() {
+		return "wrap returns with " + wrapper.getMethodName() + " in " + describeMatchers();
+	}
 	
 	/**
 	 * @param targetMethod The target method to patch.

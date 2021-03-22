@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2020 The Project Lombok Authors.
+ * Copyright (C) 2009-2021 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -86,7 +86,7 @@ public class ExitFromMethodEarlyScript extends MethodLevelPatchScript {
 		private final String ownClassSpec;
 		
 		public ExitEarly(MethodVisitor mv, MethodLogistics logistics, String ownClassSpec) {
-			super(Opcodes.ASM7, mv);
+			super(Opcodes.ASM9, mv);
 			this.logistics = logistics;
 			this.ownClassSpec = ownClassSpec;
 		}

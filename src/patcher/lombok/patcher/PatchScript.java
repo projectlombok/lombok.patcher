@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2020 The Project Lombok Authors.
+ * Copyright (C) 2009-2021 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -164,7 +164,7 @@ public abstract class PatchScript {
 	
 	private static abstract class NoopClassVisitor extends ClassVisitor {
 		public NoopClassVisitor() {
-			super(Opcodes.ASM7);
+			super(Opcodes.ASM9);
 		}
 		
 		public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {}
@@ -210,7 +210,7 @@ public abstract class PatchScript {
 
 	private static final class InsertBodyOfMethodIntoAnotherVisitor extends MethodVisitor {
 		private InsertBodyOfMethodIntoAnotherVisitor(MethodVisitor mv) {
-			super(Opcodes.ASM7, mv);
+			super(Opcodes.ASM9, mv);
 		}
 		
 		@Override public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) { return null; }
@@ -247,7 +247,7 @@ public abstract class PatchScript {
 		private int classFileFormatVersion;
 		
 		public MethodPatcher(ClassVisitor cv, TransplantMapper transplantMapper, MethodPatcherFactory factory) {
-			super(Opcodes.ASM7, cv);
+			super(Opcodes.ASM9, cv);
 			this.factory = factory;
 			this.transplantMapper = transplantMapper;
 		}

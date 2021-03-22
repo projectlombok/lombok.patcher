@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2020 The Project Lombok Authors.
+ * Copyright (C) 2009-2021 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -84,7 +84,7 @@ public class WrapMethodCallScript extends MethodLevelPatchScript {
 		private final MethodLogistics logistics;
 		
 		public WrapMethodCall(MethodVisitor mv, String ownClassSpec, MethodLogistics logistics) {
-			super(Opcodes.ASM7, mv);
+			super(Opcodes.ASM9, mv);
 			this.ownClassSpec = ownClassSpec;
 			this.logistics = logistics;
 		}

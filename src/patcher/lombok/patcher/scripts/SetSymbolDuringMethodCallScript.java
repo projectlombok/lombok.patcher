@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2020 The Project Lombok Authors.
+ * Copyright (C) 2009-2021 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -111,7 +111,7 @@ public class SetSymbolDuringMethodCallScript extends MethodLevelPatchScript {
 		private final List<WrapperMethodDescriptor> descriptors;
 		
 		public WrapWithSymbol(String selfMethodName, MethodVisitor mv, String selfTypeName, List<WrapperMethodDescriptor> descriptors) {
-			super(Opcodes.ASM7, mv);
+			super(Opcodes.ASM9, mv);
 			this.selfMethodName = selfMethodName;
 			this.selfTypeName = selfTypeName;
 			this.descriptors = descriptors;

@@ -11,9 +11,9 @@
 		<dependency org="junit" name="junit" rev="4.13" conf="test -> default"/>
 		<dependency org="com.jcraft" name="jsch" rev="0.1.42" conf="build->default" />
 		<dependency org="projectlombok.org" name="jsch-ant-fixed" rev="0.1.45" conf="build" />
-		<dependency org="org.ow2.asm" name="asm" rev="9.1" conf="runtime, build -> default; contrib->sources" />
-		<dependency org="org.ow2.asm" name="asm-tree" rev="9.1" conf="runtime, build->default; contrib->sources" />
-		<dependency org="org.ow2.asm" name="asm-commons" rev="9.1" conf="runtime, build->default; contrib->sources" />
+		<dependency org="org.ow2.asm" name="asm" rev="9.2" conf="runtime, build -> default; contrib->sources" />
+		<dependency org="org.ow2.asm" name="asm-tree" rev="9.2" conf="runtime, build->default; contrib->sources" />
+		<dependency org="org.ow2.asm" name="asm-commons" rev="9.2" conf="runtime, build->default; contrib->sources" />
 		<dependency org="net.java.dev.jna" name="jna" rev="5.6.0" conf="runtimeInjector, build->master" />
 	</dependencies>
 </ivy-module>

@@ -324,8 +324,8 @@ public class ScriptBuilder {
 	}
 	
 	/**
-	 * This script scans a target method (The <em>target</em>) for calls to a certain method (The <code>methodToWrap</code>) and
-	 * adds a call to a third method (The <code>wrapMethod</code>), which can inspect and even modify the value.
+	 * This script scans a target method (The <em>target</em>) for calls to a certain method (The {@code methodToWrap}) and
+	 * adds a call to a third method (The {@code wrapMethod}), which can inspect and even modify the value.
 	 */
 	public static class WrapMethodCallBuilder {
 		private List<TargetMatcher> matchers = new ArrayList<TargetMatcher>();
@@ -531,7 +531,7 @@ public class ScriptBuilder {
 	}
 	
 	/**
-	 * This script scans a target method (The <em>target</em>) for calls to a certain method (The <code>methodToReplace</code>) and
+	 * This script scans a target method (The <em>target</em>) for calls to a certain method (The {@code methodToReplace}) and
 	 * replaces these calls with a different call; usually the replacement is your own creation.
 	 */
 	public static ReplaceMethodCallBuilder replaceMethodCall() {
@@ -539,8 +539,8 @@ public class ScriptBuilder {
 	}
 	
 	/**
-	 * This script scans a target method (The <em>target</em>) for calls to a certain method (The <code>methodToWrap</code>) and
-	 * adds a call to a third method (The <code>wrapMethod</code>), which can inspect and even modify the value.
+	 * This script scans a target method (The <em>target</em>) for calls to a certain method (The {@code methodToWrap}) and
+	 * adds a call to a third method (The {@code wrapMethod}), which can inspect and even modify the value.
 	 */
 	public static WrapMethodCallBuilder wrapMethodCall() {
 		return new WrapMethodCallBuilder();

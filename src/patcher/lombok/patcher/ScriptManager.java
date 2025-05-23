@@ -33,6 +33,7 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +41,7 @@ import java.util.jar.JarFile;
 
 public class ScriptManager {
 	private static final class WitnessAction {
+		List<String[]> triggerGroups;
 		boolean triggered;
 		boolean ifWitnessRemove;
 		PatchScript script;
@@ -55,6 +57,36 @@ public class ScriptManager {
 		scripts.add(script);
 	}
 	
+	/**
+	 * Registers {@code script} as a script to apply, but delay adding the script until at least one class is witnessed from each group in {@code witnessGroups}.
+	 * 
+	 * @param witness A list of fully qualified type names to watch for. {@code script} is added when any of these types is loaded.
+	 * @param script The script to add.
+	 */
+	public void addScriptIfComplexWitness(String[][] witnessGroups, PatchScript script) {
+		WitnessAction wa = new WitnessAction();
+		wa.ifWitnessRemove = false;
+		wa.script = script;
+		wa.triggerGroups = new ArrayList<String[]>();
+		for (String[] group : witnessGroups) wa.triggerGroups.add(group);
+		Set<String> seen = new HashSet<String>();
+		for (String[] group : witnessGroups) for (String w : group) {
+			if (!seen.add(w)) continue;
+			List<WitnessAction> list = witnessActions.get(w);
+			if (list == null) {
+				list = new ArrayList<WitnessAction>();
+				witnessActions.put(w, list);
+			}
+			list.add(wa);
+		}
+	}
+	
+	/**
+	 * Registers {@code script} as a script to apply, but delay adding the script until a class is loaded that is listed in {@code witness}.
+	 * 
+	 * @param witness A list of fully qualified type names to watch for. {@code script} is added when any of these types is loaded.
+	 * @param script The script to add.
+	 */
 	public void addScriptIfWitness(String[] witness, PatchScript script) {
 		WitnessAction wa = new WitnessAction();
 		wa.ifWitnessRemove = false;
@@ -138,6 +170,20 @@ public class ScriptManager {
 			if (actions != null) {
 				for (WitnessAction wa : actions) {
 					if (wa.triggered) continue;
+					List<String[]> triggerGroups = wa.triggerGroups;
+					if (triggerGroups != null) {
+						// Remove each group that is triggered by this class...
+						Iterator<String[]> it = triggerGroups.iterator();
+						while (it.hasNext()) {
+							String[] group = it.next();
+							for (String c : group) if (className.equals(c)) {
+								it.remove();
+								break;
+							}
+						}
+						// ... and if at least one group hasn't been eliminated yet, this action isn't ready to be added.
+						if (!triggerGroups.isEmpty()) break;
+					}
 					wa.triggered = true;
 					if (wa.ifWitnessRemove) {
 						scripts.remove(wa.script);
